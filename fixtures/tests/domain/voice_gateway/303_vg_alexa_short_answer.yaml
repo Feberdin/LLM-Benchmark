@@ -1,0 +1,31 @@
+# Purpose: Speech benchmark for concise Alexa-ready answers from structured status data.
+# Input/Output: Expects a very short plain-text answer.
+# Invariants: The answer should stay compact, readable aloud and limited to the supplied state snapshot.
+# Debugging: Failures usually come from verbosity or missing the main system values.
+
+test_case_id: "vg-alexa-short-answer"
+category: "instruction_following"
+title: "Voice gateway Alexa short answer"
+description: "Benchmarks whether a model can produce a short, speakable response from a tiny status snapshot."
+prompt_file: "fixtures/vg_alexa_short_answer.txt"
+expected_format: "text"
+validation_rules:
+  contains_all:
+    - "67"
+  contains_none:
+    - "```"
+  min_length_chars: 40
+  max_length_chars: 160
+  reference_keywords:
+    - "Wallbox"
+tags: ["voice_gateway", "speech", "alexa"]
+suites: ["voice_gateway"]
+max_output_tokens: 90
+repetitions_default: 2
+scoring_weights:
+  quality: 0.25
+  format: 0.20
+  latency: 0.15
+  stability: 0.10
+  instruction: 0.20
+  reproducibility: 0.10

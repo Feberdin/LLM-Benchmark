@@ -1,0 +1,77 @@
+# Purpose: General example benchmark configuration for Docker, local runs and most Unraid setups.
+# Input/Output: Read by `benchmark run` and resolved with environment variables at startup.
+# Invariants: All models use comparable defaults so fairness issues are visible rather than hidden.
+# Debugging: If a model fails, first verify the base URL, API key env var and timeout configured below.
+
+version: "1"
+benchmark_name: "feberdin-llm-benchmark"
+description: "Compare local Mistral, local Qwen and an OpenAI reference endpoint via OpenAI-compatible APIs."
+
+run_defaults:
+  concurrency: 2
+  warmup_runs: 1
+  default_repetitions: 2
+  max_retries: 2
+  retry_backoff_seconds: 1.0
+  default_timeout_seconds: 180
+  stream_for_ttft: false
+  capture_raw_response_text: true
+  include_warmup_in_raw_outputs: true
+  prompt_version: "2026-04-core"
+  latency_target_ms: 5000
+  tests_dir: "/app/tests"
+  output_dir: "/app/results"
+  scoring_weights:
+    quality: 0.35
+    format: 0.25
+    latency: 0.20
+    stability: 0.10
+    reproducibility: 0.10
+    instruction: 0.00
+
+models:
+  - id: "mistral-local"
+    label: "Mistral Small 3.2 (Local)"
+    provider: "ollama"
+    base_url: "${OLLAMA_BASE_URL:-http://ollama:11434/v1}"
+    api_type: "openai_chat_completions"
+    model_name: "mistral-small3.2"
+    enabled: true
+    default_parameters:
+      temperature: 0.0
+      top_p: 1.0
+    timeout_seconds: 180
+    supports_streaming: true
+    supports_tools: true
+    supports_structured_output: false
+
+  - id: "qwen-local"
+    label: "Qwen 3.5 35B A3B (Local)"
+    provider: "ollama"
+    base_url: "${OLLAMA_BASE_URL:-http://ollama:11434/v1}"
+    api_type: "openai_chat_completions"
+    model_name: "qwen3.5-35b-a3b"
+    enabled: true
+    default_parameters:
+      temperature: 0.0
+      top_p: 1.0
+    timeout_seconds: 240
+    supports_streaming: true
+    supports_tools: true
+    supports_structured_output: false
+
+  - id: "openai-reference"
+    label: "OpenAI Reference"
+    provider: "openai"
+    base_url: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+    api_type: "openai_chat_completions"
+    model_name: "gpt-4.1-mini"
+    api_key_env: "OPENAI_API_KEY"
+    enabled: true
+    default_parameters:
+      temperature: 0.0
+      top_p: 1.0
+    timeout_seconds: 120
+    supports_streaming: true
+    supports_tools: true
+    supports_structured_output: true

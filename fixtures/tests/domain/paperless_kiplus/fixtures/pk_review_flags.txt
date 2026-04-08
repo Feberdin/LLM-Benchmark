@@ -1,0 +1,15 @@
+Return strict JSON with:
+- needs_review
+- needs_payment_proof
+- needs_person_assignment
+- needs_year_assignment
+- high_audit_relevance
+- mixed_private_and_tax_relevant
+- cash_payment_not_eligible
+
+Case:
+Arztrechnung ueber 240,00 EUR vom 28.12.2025.
+Die Rechnung nennt keinen Zahlungseingang.
+Empfaenger ist nur mit "Familie Berger" bezeichnet.
+Im Freitext steht, dass ein Teil privat und ein Teil fuer ein moegliches berufliches Attest gedacht war.
+Bezahlt wurde laut handschriftlicher Notiz bar.

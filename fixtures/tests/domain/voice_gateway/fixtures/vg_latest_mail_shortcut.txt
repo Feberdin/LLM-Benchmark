@@ -1,0 +1,14 @@
+Return strict JSON with:
+- route
+- reason
+- prepared_question
+- should_use_ai_fallback
+- safe_action
+
+Utterance:
+"lies mir den Inhalt meiner letzten Mail vor"
+
+Rules:
+- Recognize the dedicated shortcut.
+- `prepared_question` should preserve the intent for the backend.
+- This is not a generic AI question.

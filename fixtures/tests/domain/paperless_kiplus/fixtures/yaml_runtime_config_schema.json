@@ -1,0 +1,84 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "paperless_url",
+    "paperless_token",
+    "ocr_language",
+    "process_only_tag",
+    "dry_run",
+    "parallelism",
+    "basis_config",
+    "prechecks",
+    "duplicate_handling",
+    "ai_notes",
+    "tax_enrichment"
+  ],
+  "properties": {
+    "paperless_url": { "type": "string" },
+    "paperless_token": { "type": "string" },
+    "ocr_language": { "type": "string" },
+    "process_only_tag": { "type": "string" },
+    "dry_run": { "type": "boolean" },
+    "parallelism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_documents_in_flight", "max_ai_calls"],
+      "properties": {
+        "max_documents_in_flight": { "type": "integer" },
+        "max_ai_calls": { "type": "integer" }
+      }
+    },
+    "basis_config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document_type_fallback", "correspondent_fallback", "storage_path_fallback", "default_tags"],
+      "properties": {
+        "document_type_fallback": { "type": "string" },
+        "correspondent_fallback": { "type": "string" },
+        "storage_path_fallback": { "type": "string" },
+        "default_tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "prechecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enable_duplicate_gate", "enable_skip_gate", "enable_quarantine_gate"],
+      "properties": {
+        "enable_duplicate_gate": { "type": "boolean" },
+        "enable_skip_gate": { "type": "boolean" },
+        "enable_quarantine_gate": { "type": "boolean" }
+      }
+    },
+    "duplicate_handling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy", "cooldown_seconds"],
+      "properties": {
+        "strategy": { "type": "string" },
+        "cooldown_seconds": { "type": "integer" }
+      }
+    },
+    "ai_notes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "max_chars"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "max_chars": { "type": "integer" }
+      }
+    },
+    "tax_enrichment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "review_required_by_default"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "review_required_by_default": { "type": "boolean" }
+      }
+    }
+  }
+}

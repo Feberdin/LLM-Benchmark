@@ -1,0 +1,25 @@
+# Purpose: SecondBrain citation benchmark for answer plus explicit evidence references.
+# Input/Output: Expects strict JSON with answer text, cited source ids, confidence and unsupported claims.
+# Invariants: At least two citations must be present because the prompt contains multiple corroborating items.
+# Debugging: Failures usually show up as missing source ids or prose outside the JSON envelope.
+
+test_case_id: "sb-source-oriented-answer"
+category: "chat"
+title: "SecondBrain source-oriented answer"
+description: "Benchmarks whether the model can produce a compact answer with explicit source references and confidence."
+prompt_file: "fixtures/sb_source_oriented_answer.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/source_answer_schema.json"
+  required_fields: ["answer", "cited_items", "confidence", "unsupported_claims"]
+  required_json_paths: ["cited_items.1"]
+  reference_keywords:
+    - "SB-MAIL-2026-0416"
+    - "SB-DOC-2026-0308"
+    - "Depotuebertrag"
+tags: ["secondbrain", "citations", "knowledge"]
+suites: ["secondbrain"]
+max_output_tokens: 220
+repetitions_default: 2

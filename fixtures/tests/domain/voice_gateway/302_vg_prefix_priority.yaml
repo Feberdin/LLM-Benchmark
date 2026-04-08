@@ -1,0 +1,25 @@
+# Purpose: Prefix priority benchmark for explicit route forcing in the voice gateway.
+# Input/Output: Expects strict JSON with a single planned route and prepared backend question.
+# Invariants: Explicit prefixes must override more generic semantic routing.
+# Debugging: If the route drifts away from docker, inspect the reason and prepared_question fields.
+
+test_case_id: "vg-prefix-priority"
+category: "classification"
+title: "Voice gateway explicit prefix priority"
+description: "Measures whether explicit prefixes like 'frage docker' dominate over semantic ambiguity."
+prompt_file: "fixtures/vg_prefix_priority.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/routing_plan_schema.json"
+  expected_json_values:
+    route: "docker"
+    should_use_ai_fallback: false
+  reference_keywords:
+    - "paperless"
+    - "ungesund"
+tags: ["voice_gateway", "routing", "prefix"]
+suites: ["voice_gateway"]
+max_output_tokens: 220
+repetitions_default: 2

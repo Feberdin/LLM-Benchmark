@@ -1,0 +1,241 @@
+{#
+Purpose: HTML benchmark report template with a clean, shareable summary for browsers and file exports.
+Input/Output: Receives the final report payload and renders a compact but professional HTML document.
+Important invariants: The layout stays readable on desktop and mobile without external assets.
+How to debug: If styling or data is wrong, inspect the final report payload before editing the template.
+#}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LLM Benchmark Report</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #52606d;
+      --line: #d9e2ec;
+      --accent: #0b6e4f;
+      --danger: #b42318;
+      --warning: #b54708;
+      --shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(11, 110, 79, 0.12), transparent 22rem),
+        linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
+    }
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+    }
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1d4d4f 100%);
+      color: white;
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+    .hero p {
+      margin: 6px 0;
+      color: rgba(255, 255, 255, 0.88);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .card h2, .card h3 {
+      margin-top: 0;
+    }
+    .metric {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 6px 0;
+      color: var(--accent);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-size: 0.76rem;
+    }
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: rgba(11, 110, 79, 0.1);
+      color: var(--accent);
+    }
+    .danger { color: var(--danger); }
+    .warning { color: var(--warning); }
+    ul { padding-left: 20px; }
+    @media (max-width: 720px) {
+      .hero h1 { font-size: 1.6rem; }
+      th, td { padding: 8px; font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>LLM Benchmark Report</h1>
+      <p>Run ID: <strong>{{ report.benchmark_info.benchmark_run_id }}</strong></p>
+      <p>Suite: <strong>{{ report.benchmark_info.suite }}</strong> | Benchmark: <strong>{{ report.benchmark_info.benchmark_name }}</strong></p>
+      <p>Measured records: <strong>{{ report.benchmark_info.measured_records }}</strong> | Warmup records: <strong>{{ report.benchmark_info.warmup_records }}</strong></p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Top Model</h2>
+        {% if report.rankings %}
+        <div class="metric">{{ report.rankings[0].model_label }}</div>
+        <p>Average total score: <strong>{{ "%.2f"|format(report.rankings[0].avg_total_score) }}</strong></p>
+        {% else %}
+        <p>No measured ranking data available.</p>
+        {% endif %}
+      </article>
+      <article class="card">
+        <h2>Average Score</h2>
+        <div class="metric">{{ "%.2f"|format(report.aggregate_scores.overall_average_total_score) }}</div>
+        <p>Weighted across all measured runs.</p>
+      </article>
+      <article class="card">
+        <h2>Generated</h2>
+        <div class="metric">{{ report.benchmark_info.generated_at[:10] }}</div>
+        <p>{{ report.benchmark_info.generated_at }}</p>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>Ranking</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Model</th>
+            <th>Provider</th>
+            <th>Avg Total Score</th>
+            <th>Success Rate</th>
+            <th>Validation Pass</th>
+            <th>Avg Duration (ms)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in report.rankings %}
+          <tr>
+            <td>{{ item.rank }}</td>
+            <td>{{ item.model_label }}</td>
+            <td>{{ item.provider }}</td>
+            <td>{{ "%.2f"|format(item.avg_total_score) }}</td>
+            <td>{{ "%.2f"|format(item.success_rate * 100) }}%</td>
+            <td>{{ "%.2f"|format(item.validation_pass_rate * 100) }}%</td>
+            <td>{{ "%.2f"|format(item.avg_duration_ms) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="grid">
+      {% for model in report.models %}
+      <article class="card">
+        <h3>{{ model.model_label }}</h3>
+        <p><span class="pill">{{ model.provider }}</span></p>
+        <p><strong>Endpoint:</strong> {{ model.base_url }}</p>
+        <p><strong>Model:</strong> {{ model.model_name }}</p>
+        {% if model.summary %}
+        <p><strong>Avg Total Score:</strong> {{ model.summary.avg_total_score }}</p>
+        <p><strong>Success Rate:</strong> {{ "%.2f"|format(model.summary.success_rate * 100) }}%</p>
+        <p><strong>Validation Pass:</strong> {{ "%.2f"|format(model.summary.validation_pass_rate * 100) }}%</p>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </section>
+
+    <section class="card">
+      <h2>Recommendations</h2>
+      <ul>
+        {% for item in report.recommendations %}
+        <li><strong>{{ item.priority|upper }}:</strong> {{ item.summary }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Strengths</h2>
+        <ul>
+          {% for item in report.strengths %}
+          <li>{{ item.summary }}</li>
+          {% endfor %}
+        </ul>
+      </article>
+      <article class="card">
+        <h2>Weaknesses</h2>
+        <ul>
+          {% for item in report.weaknesses %}
+          <li>{{ item.summary }}</li>
+          {% endfor %}
+        </ul>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>Anomalies</h2>
+      {% if report.anomalies %}
+      <ul>
+        {% for item in report.anomalies %}
+        <li class="{% if 'failure' in item.type %}danger{% elif 'latency' in item.type %}warning{% endif %}">{{ item.summary }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p>No major anomalies detected in the measured runs.</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <h2>Fairness Notes</h2>
+      <ul>
+        {% for item in report.fairness_notes %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+</body>
+</html>

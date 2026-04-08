@@ -1,0 +1,40 @@
+# Purpose: Strict format benchmark that is easy to score and cheap to run on slower local inference.
+# Input/Output: Expects exactly three short lines with fixed prefixes.
+# Invariants: The model must not add preambles, bullets or code fences.
+# Debugging: If extra text appears, inspect instruction-score and format-score components together.
+
+test_case_id: "quick-instruction-format"
+category: "instruction_following"
+title: "Quick strict-format reply"
+description: "Micro instruction-following test for compact and comparable outputs."
+prompt: |
+  Analyze the statement `Customer exports are delayed because the queue consumer is offline.`
+  Reply in exactly 3 lines with these prefixes only:
+  status:
+  urgency:
+  summary:
+expected_format: "text"
+validation_rules:
+  contains_all:
+    - "status:"
+    - "urgency:"
+    - "summary:"
+  contains_none:
+    - "```"
+    - "*"
+  regex_must_match:
+    - "(?m)^status:\\s*.+$"
+    - "(?m)^urgency:\\s*(low|medium|high)$"
+    - "(?m)^summary:\\s+.+$"
+  max_length_chars: 150
+scoring_weights:
+  quality: 0.20
+  format: 0.25
+  latency: 0.15
+  stability: 0.10
+  reproducibility: 0.10
+  instruction: 0.20
+tags: ["quick_compare", "instruction"]
+suites: ["quick_compare"]
+max_output_tokens: 90
+repetitions_default: 2

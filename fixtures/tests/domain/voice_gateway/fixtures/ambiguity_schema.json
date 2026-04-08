@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["action", "clarification_question", "reason"],
+  "properties": {
+    "action": { "type": "string" },
+    "clarification_question": { "type": "string" },
+    "reason": { "type": "string" }
+  }
+}

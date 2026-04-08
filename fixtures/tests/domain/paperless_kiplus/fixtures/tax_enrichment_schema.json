@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tax_year",
+    "document_date",
+    "issuer",
+    "recipient",
+    "total_amount",
+    "tax_category",
+    "tax_subcategory",
+    "wiso_target_area",
+    "classification_confidence",
+    "eligibility_confidence",
+    "flags",
+    "reasoning_summary",
+    "formal_validity"
+  ],
+  "properties": {
+    "tax_year": { "type": "integer" },
+    "document_date": { "type": "string" },
+    "issuer": { "type": "string" },
+    "recipient": { "type": "string" },
+    "total_amount": { "type": "number" },
+    "tax_category": { "type": "string" },
+    "tax_subcategory": { "type": "string" },
+    "wiso_target_area": { "type": "string" },
+    "classification_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "eligibility_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "flags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "reasoning_summary": { "type": "string" },
+    "formal_validity": { "type": "string" }
+  }
+}

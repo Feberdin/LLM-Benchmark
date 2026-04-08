@@ -1,0 +1,21 @@
+Return strict JSON with:
+- document_type
+- correspondent
+- storage_path
+- tags
+- document_date
+- ai_note
+
+Document OCR text:
+Telekom Deutschland GmbH
+Rechnung Maerz 2026
+Kundennummer 77821145
+Rechnungsdatum 04.03.2026
+Leistungszeitraum 01.03.2026 bis 31.03.2026
+Gesamtbetrag 48,95 EUR
+Faellig zum 18.03.2026
+
+Rules:
+- Keep tags sparse.
+- No markdown.
+- Use a practical Paperless storage path.

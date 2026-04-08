@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision", "trusted_context_only", "blocked_instructions", "answer"],
+  "properties": {
+    "decision": {
+      "type": "string"
+    },
+    "trusted_context_only": {
+      "type": "boolean"
+    },
+    "blocked_instructions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "answer": {
+      "type": "string"
+    }
+  }
+}

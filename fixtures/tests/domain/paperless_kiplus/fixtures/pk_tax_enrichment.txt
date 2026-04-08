@@ -1,0 +1,29 @@
+Return strict JSON with:
+- tax_year
+- document_date
+- issuer
+- recipient
+- total_amount
+- tax_category
+- tax_subcategory
+- wiso_target_area
+- classification_confidence
+- eligibility_confidence
+- flags
+- reasoning_summary
+- formal_validity
+
+Rules:
+- Be conservative.
+- No legal advice.
+- Use review-oriented flags when uncertain.
+
+Document OCR:
+Fortbildungsinstitut Nord
+Seminarrechnung
+Teilnehmerin: Lena Berger
+Rechnungsdatum: 09.11.2025
+Seminar: Projektmanagement Aufbaukurs
+Gesamtbetrag: 389,00 EUR
+Zahlung per Ueberweisung
+Leistungsdatum: 07.11.2025

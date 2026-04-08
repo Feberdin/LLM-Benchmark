@@ -1,0 +1,14 @@
+Return strict JSON with:
+- max_parallel_documents
+- request_timeout_seconds
+- dry_run_default
+- duplicate_policy
+- quarantine_on_error
+
+Goal:
+Suggest conservative production defaults for Paperless-KIplus on a Home Assistant setup that should run reliably for weeks.
+
+Assumptions:
+- CPU-bound AI calls
+- moderate document volume
+- operator prefers safety over throughput

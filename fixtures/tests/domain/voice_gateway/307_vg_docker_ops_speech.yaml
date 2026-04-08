@@ -1,0 +1,22 @@
+# Purpose: Docker status speech benchmark for short spoken summaries from structured container health.
+# Input/Output: Expects a compact plain-text answer with the first troubleshooting step.
+# Invariants: Critical containers should be named before healthy background services.
+# Debugging: Overlong answers are common; inspect character counts and whether the unhealthy container is mentioned.
+
+test_case_id: "vg-docker-ops-speech"
+category: "instruction_following"
+title: "Voice gateway Docker status speech answer"
+description: "Benchmarks compact speech-ready answers from a synthetic Docker status snapshot."
+prompt_file: "fixtures/vg_docker_ops_speech.txt"
+expected_format: "text"
+validation_rules:
+  contains_all:
+    - "paperless-consumer"
+  min_length_chars: 70
+  max_length_chars: 220
+  reference_keywords:
+    - "secondbrain-worker"
+tags: ["voice_gateway", "docker", "speech"]
+suites: ["voice_gateway"]
+max_output_tokens: 120
+repetitions_default: 2

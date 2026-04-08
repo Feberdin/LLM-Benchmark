@@ -1,0 +1,25 @@
+# Purpose: Fact extraction benchmark for turning document text into stable SecondBrain metadata.
+# Input/Output: Expects strict JSON with a top-level `facts` array.
+# Invariants: Extracted values must stay conservative and source-bound.
+# Debugging: Missing deadline or customer number usually indicate either parsing drift or weak structure control.
+
+test_case_id: "sb-fact-extraction"
+category: "extraction_json"
+title: "SecondBrain fact and metadata extraction"
+description: "Benchmarks contract-style metadata extraction for future contract, fact and timeline entities."
+prompt_file: "fixtures/sb_fact_extraction.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/fact_extraction_schema.json"
+  required_fields: ["facts"]
+  reference_keywords:
+    - "Aboflex Energie GmbH"
+    - "31.05.2026"
+    - "K-884129"
+    - "E-2026-118"
+tags: ["secondbrain", "facts", "metadata", "json"]
+suites: ["secondbrain"]
+max_output_tokens: 260
+repetitions_default: 2

@@ -1,0 +1,19 @@
+Return strict JSON with:
+- decision
+- reason
+- needs_review
+
+Case:
+{
+  "document_id": 8122,
+  "checksum_known": true,
+  "checksum_match_document_id": 7004,
+  "incoming_tags": ["banking", "kontoauszug"],
+  "ocr_excerpt": "Kontoauszug April 2026 Sparkasse Nord",
+  "existing_document_summary": "Bereits importierter Kontoauszug April 2026 mit identischem Hash",
+  "dry_run": false
+}
+
+Rules:
+- Choose one of skip, quarantine, process or duplicate_apply_metadata.
+- Prefer conservative duplicate handling.

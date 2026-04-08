@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Benchmark Analysis Input",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "purpose",
+    "benchmark_metadata",
+    "hardware_and_environment_hints",
+    "model_rankings",
+    "speed_summary",
+    "category_findings",
+    "aggregate_scores",
+    "anomalies",
+    "representative_failures",
+    "representative_success_examples",
+    "model_cards",
+    "repo_recommendations",
+    "best_model_for_secondbrain",
+    "best_model_for_voice_gateway",
+    "best_model_for_paperless_kiplus",
+    "security_behavior_summary",
+    "structured_output_summary",
+    "voice_response_summary",
+    "tax_enrichment_summary",
+    "follow_up_recommendations"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "benchmark_metadata": {
+      "type": "object",
+      "required": [
+        "benchmark_run_id",
+        "benchmark_name",
+        "suite",
+        "run_started_at",
+        "run_finished_at",
+        "generated_at",
+        "total_records",
+        "measured_records",
+        "warmup_records"
+      ]
+    },
+    "hardware_and_environment_hints": {
+      "type": "object",
+      "required": [
+        "environment_info",
+        "configured_execution_profile",
+        "interpretation_hints"
+      ]
+    },
+    "model_rankings": {
+      "type": "array"
+    },
+    "speed_summary": {
+      "type": "object",
+      "required": [
+        "fastest_model_by_avg_duration",
+        "slowest_model_by_avg_duration"
+      ]
+    },
+    "category_findings": {
+      "type": "object",
+      "required": [
+        "best_category_rows",
+        "worst_category_rows",
+        "best_test_case_rows",
+        "worst_test_case_rows"
+      ]
+    },
+    "aggregate_scores": {
+      "type": "object",
+      "required": [
+        "overall_average_total_score",
+        "by_model",
+        "by_category",
+        "by_test_case"
+      ]
+    },
+    "anomalies": {
+      "type": "array"
+    },
+    "representative_failures": {
+      "type": "array"
+    },
+    "representative_success_examples": {
+      "type": "array"
+    },
+    "model_cards": {
+      "type": "array"
+    },
+    "repo_recommendations": {
+      "type": "object"
+    },
+    "best_model_for_secondbrain": {},
+    "best_model_for_voice_gateway": {},
+    "best_model_for_paperless_kiplus": {},
+    "security_behavior_summary": {
+      "type": "object"
+    },
+    "structured_output_summary": {
+      "type": "object"
+    },
+    "voice_response_summary": {
+      "type": "object"
+    },
+    "tax_enrichment_summary": {
+      "type": "object"
+    },
+    "follow_up_recommendations": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

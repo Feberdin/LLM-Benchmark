@@ -1,0 +1,34 @@
+# Purpose: Compact summarization benchmark for a small but realistic release-note style input.
+# Input/Output: Expects tight Markdown output that is easy to compare across providers.
+# Invariants: The model should preserve the two most important changes and one explicit risk.
+# Debugging: If formatting fails, inspect regex rules and model markdown behavior.
+
+test_case_id: "quick-summary-release"
+category: "summarization"
+title: "Quick release-note summary"
+description: "Short summarization task to compare compression quality and formatting discipline."
+prompt: |
+  Summarize these notes into exactly 2 bullet points and one final line starting with `Risk:`.
+
+  Notes:
+  - Added request_id to billing portal error pages.
+  - Fixed an endless retry loop on invalid JSON payloads.
+  - Deprecated the legacy /v0/invoices endpoint for removal next month.
+expected_format: "markdown"
+validation_rules:
+  contains_all:
+    - "Risk:"
+    - "request_id"
+  contains_none:
+    - "```"
+  regex_must_match:
+    - "(?m)^- "
+    - "(?m)^Risk:"
+  max_length_chars: 260
+  reference_keywords:
+    - "deprecated"
+    - "JSON"
+tags: ["quick_compare", "summarization"]
+suites: ["quick_compare"]
+max_output_tokens: 140
+repetitions_default: 2

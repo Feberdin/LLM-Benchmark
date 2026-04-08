@@ -1,0 +1,23 @@
+# Purpose: AI-note benchmark for brief, helpful operator-facing summaries.
+# Input/Output: Expects a single short plain-text sentence.
+# Invariants: The note should stay within the hard length cap and mention the document plus its key action.
+# Debugging: If the note grows into a paragraph, the instruction-following checks will flag it.
+
+test_case_id: "pk-ai-note"
+category: "summarization"
+title: "Paperless-KIplus concise AI note"
+description: "Benchmarks whether the model can write a short, useful AI note for a classified document."
+prompt_file: "fixtures/pk_ai_note.txt"
+expected_format: "text"
+validation_rules:
+  contains_all:
+    - "Mobilfunkrechnung"
+    - "18.03.2026"
+  contains_none:
+    - "```"
+  min_length_chars: 50
+  max_length_chars: 180
+tags: ["paperless_kiplus", "ai_note", "summary"]
+suites: ["paperless_kiplus"]
+max_output_tokens: 90
+repetitions_default: 2

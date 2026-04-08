@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["route", "allowed", "safe_action", "reason", "should_use_ai_fallback"],
+  "properties": {
+    "route": { "type": "string" },
+    "allowed": { "type": "boolean" },
+    "safe_action": { "type": ["string", "null"] },
+    "reason": { "type": "string" },
+    "should_use_ai_fallback": { "type": "boolean" }
+  }
+}

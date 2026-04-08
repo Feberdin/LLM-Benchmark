@@ -1,0 +1,24 @@
+# Purpose: Precheck benchmark for duplicate and skip decisions before expensive AI processing starts.
+# Input/Output: Expects strict JSON with one deterministic processing decision.
+# Invariants: Duplicate checksum hits should not trigger a full re-processing path.
+# Debugging: Wrong decisions are easiest to spot in the exact `decision` value and the reasoning text.
+
+test_case_id: "pk-precheck-decision"
+category: "classification"
+title: "Paperless-KIplus precheck and duplicate decision"
+description: "Tests conservative decisions for duplicates, skip logic and review handling."
+prompt_file: "fixtures/pk_precheck_decision.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/precheck_decision_schema.json"
+  expected_json_values:
+    decision: "duplicate_apply_metadata"
+    needs_review: false
+  reference_keywords:
+    - "checksum"
+tags: ["paperless_kiplus", "precheck", "duplicate"]
+suites: ["paperless_kiplus"]
+max_output_tokens: 180
+repetitions_default: 2

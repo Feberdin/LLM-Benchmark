@@ -1,0 +1,40 @@
+# Purpose: Classification benchmark that checks correctness and clean JSON formatting.
+# Input/Output: Expects a JSON label plus a short justification.
+# Invariants: The model must classify the ticket as billing, not support or security.
+# Debugging: If the label drifts, inspect `expected_json_values` and provider sampling defaults.
+
+test_case_id: "classify-support-ticket"
+category: "classification"
+title: "Classify a support ticket"
+description: "Map a support message to a target label in stable JSON for routing use cases."
+prompt: |
+  Classify the support ticket into one of these labels: billing, outage, feature_request, account_access.
+  Return only JSON with `label` and `justification`.
+
+  Ticket:
+  I was charged twice after updating the payment method.
+  Please refund the duplicate invoice and confirm the correct billing cycle.
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["label", "justification"]
+    properties:
+      label:
+        type: "string"
+        enum: ["billing", "outage", "feature_request", "account_access"]
+      justification:
+        type: "string"
+  required_fields: ["label", "justification"]
+  expected_json_values:
+    label: "billing"
+  reference_keywords:
+    - "charged twice"
+    - "refund"
+tags: ["core", "classification", "routing"]
+suites: ["core"]
+max_output_tokens: 160
+repetitions_default: 2

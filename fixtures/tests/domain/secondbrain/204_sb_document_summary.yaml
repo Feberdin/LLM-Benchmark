@@ -1,0 +1,25 @@
+# Purpose: Summary benchmark for document-style source material that should stay concise and factual.
+# Input/Output: Expects a short plain-text summary without markdown wrapping.
+# Invariants: Payment amount and deadline must be preserved, and the answer must not exceed the character cap.
+# Debugging: If models ramble or invent side facts, inspect raw text and length validation results.
+
+test_case_id: "sb-document-summary"
+category: "summarization"
+title: "SecondBrain document summary without hallucinations"
+description: "Tests concise summarization for a reimbursement document excerpt from a SecondBrain-like archive."
+prompt_file: "fixtures/sb_document_summary.txt"
+expected_format: "text"
+validation_rules:
+  contains_all:
+    - "450,00"
+    - "05.05.2026"
+  contains_none:
+    - "```"
+  min_length_chars: 120
+  max_length_chars: 420
+  reference_keywords:
+    - "Bankarbeitstagen"
+tags: ["secondbrain", "summary", "documents"]
+suites: ["secondbrain"]
+max_output_tokens: 180
+repetitions_default: 2

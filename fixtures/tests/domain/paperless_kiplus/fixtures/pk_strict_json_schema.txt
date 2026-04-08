@@ -1,0 +1,22 @@
+Return strict JSON only.
+Do not wrap the output in markdown.
+
+Required keys:
+- document_type
+- correspondent
+- storage_path
+- tags
+- document_date
+- ai_note
+
+No extra keys.
+
+OCR snippet:
+Kfz-Versicherung Jahresbeitrag
+Nordlicht Versicherung AG
+Beitragsrechnung 2026
+Versicherungsnehmer: Lena Berger
+Vertragsnummer: NF-66210
+Rechnungsdatum: 11.01.2026
+Forderung: 612,00 EUR
+Zahlbar bis: 25.01.2026

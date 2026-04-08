@@ -1,0 +1,66 @@
+# Purpose: Long-context benchmark with a larger policy corpus and multi-point extraction requirement.
+# Input/Output: Expects a JSON array summarizing policy violations from a longer input block.
+# Invariants: The model should preserve entity names and avoid inventing extra violations.
+# Debugging: If long-context accuracy drops, inspect which reference keywords are consistently missed.
+
+test_case_id: "long-context-policy-audit"
+category: "long_context"
+title: "Audit a long policy document for violations"
+description: "Extract concrete policy violations from a longer operational handbook and incident narrative."
+prompt: |
+  Read the policy excerpt and incident summary. Return only JSON with a top-level key `violations`
+  containing exactly 3 objects. Each object must have `rule_id`, `summary`, and `evidence`.
+
+  Policy handbook excerpt:
+  1. RULE-SEC-01: Production secrets must be stored only in the managed vault. Secrets must never be committed to source control or pasted into tickets.
+  2. RULE-OPS-02: Every schema migration for customer-facing systems requires a rollback plan and a dry-run in staging before production deployment.
+  3. RULE-OBS-03: Incident logs must include a request identifier and affected service name for all severity-high and severity-critical events.
+  4. RULE-NET-04: Outbound firewall changes must be reviewed by the network owner and documented with the destination hostname.
+  5. RULE-DATA-05: Backup restore drills for tier-1 databases must be run once per quarter and signed off by the database owner.
+  6. RULE-REL-06: Release notes must explicitly mention deprecated endpoints and planned removal windows.
+  7. RULE-AUTH-07: Service accounts require least privilege and may not use wildcard object storage permissions.
+  8. RULE-CI-08: Build pipelines must fail on schema validation errors instead of retrying forever.
+
+  Incident summary:
+  During release 2026.04.07, the checkout platform pushed a production migration for orders-db without a rollback plan and skipped the staging dry-run because the release window was short.
+  Investigators later found an API key in the shared incident ticket, copied there by mistake while debugging the deployment.
+  The severity-high incident log mentioned customer failures but omitted the request_id even though the affected service, checkout-api, was known.
+  Additional notes:
+  - The network team was not involved.
+  - The team documented the deprecated `/v0/cart` endpoint correctly.
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["violations"]
+    properties:
+      violations:
+        type: "array"
+        minItems: 3
+        maxItems: 3
+        items:
+          type: "object"
+          additionalProperties: false
+          required: ["rule_id", "summary", "evidence"]
+          properties:
+            rule_id:
+              type: "string"
+            summary:
+              type: "string"
+            evidence:
+              type: "string"
+  required_json_paths:
+    - "violations.0.rule_id"
+    - "violations.1.rule_id"
+    - "violations.2.rule_id"
+  reference_keywords:
+    - "RULE-SEC-01"
+    - "RULE-OPS-02"
+    - "RULE-OBS-03"
+tags: ["long_context", "policy", "json"]
+suites: ["long_context"]
+max_output_tokens: 320
+repetitions_default: 2

@@ -1,0 +1,31 @@
+# Purpose: Fast chat sanity check for concise technical explanation quality.
+# Input/Output: Sends a single user prompt and expects a short plain-text answer with specific concepts.
+# Invariants: The answer must stay concise and mention the core CAP tradeoffs without drifting into unrelated topics.
+# Debugging: If models fail here, inspect `contains_all`, keyword coverage and max length handling.
+
+test_case_id: "chat-cap-theorem"
+category: "chat"
+title: "Explain CAP theorem tradeoffs"
+description: "Quick technical chat response that checks whether a model can answer clearly and stay on topic."
+prompt: |
+  Explain the CAP theorem to an infrastructure lead in 4-6 sentences.
+  Include when an AP system is a better fit than a CP system.
+  Do not use bullet points.
+expected_format: "text"
+validation_rules:
+  contains_all:
+    - "CAP theorem"
+    - "availability"
+    - "partition"
+  contains_none:
+    - "```"
+  min_length_chars: 120
+  max_length_chars: 700
+  reference_keywords:
+    - "consistency"
+    - "AP"
+    - "CP"
+tags: ["core", "sanity", "chat"]
+suites: ["core"]
+max_output_tokens: 220
+repetitions_default: 2

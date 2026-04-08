@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision", "reason", "needs_review"],
+  "properties": {
+    "decision": {
+      "type": "string",
+      "enum": ["skip", "quarantine", "process", "duplicate_apply_metadata"]
+    },
+    "reason": { "type": "string" },
+    "needs_review": { "type": "boolean" }
+  }
+}

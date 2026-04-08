@@ -1,0 +1,33 @@
+Return strict JSON with:
+- answer
+- cited_items
+- confidence
+- unsupported_claims
+
+Question:
+Wie ist der aktuelle Status von Hausbatterie, Solarleistung und Wallbox?
+
+Home Assistant snapshot:
+[
+  {
+    "entity_id": "sensor.house_battery_soc",
+    "state": "67",
+    "unit_of_measurement": "%",
+    "last_changed": "2026-04-18T11:44:00+02:00"
+  },
+  {
+    "entity_id": "sensor.solar_power",
+    "state": "4.2",
+    "unit_of_measurement": "kW",
+    "last_changed": "2026-04-18T11:44:05+02:00"
+  },
+  {
+    "entity_id": "sensor.wallbox_status",
+    "state": "idle",
+    "last_changed": "2026-04-18T11:30:00+02:00"
+  }
+]
+
+Rules:
+- Keep the answer short.
+- Cite the entity ids you used.

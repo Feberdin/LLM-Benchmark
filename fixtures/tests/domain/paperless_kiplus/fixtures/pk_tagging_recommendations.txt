@@ -1,0 +1,15 @@
+Return strict JSON with:
+- recommended_tags
+- rejected_tags
+- reason
+
+Document:
+Einkommensteuerbescheid 2025
+Finanzamt Hamburg Nord
+Bescheiddatum 14.06.2026
+Erstattung 1.482,00 EUR
+
+Rules:
+- Recommend only a few useful tags.
+- Reject noisy or unjustified tags.
+- Year or case tags only when clearly supported.

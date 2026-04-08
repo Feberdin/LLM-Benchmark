@@ -1,0 +1,25 @@
+# Purpose: Communication extraction benchmark for WhatsApp-style chat imports in SecondBrain.
+# Input/Output: Expects strict JSON with appointments, commitments, open questions and people.
+# Invariants: Only explicit chat content may be extracted; inferred promises are a failure mode here.
+# Debugging: Review source_message_id mappings when dates or commitments are missing.
+
+test_case_id: "sb-whatsapp-context"
+category: "extraction_json"
+title: "SecondBrain WhatsApp context extraction"
+description: "Benchmarks extraction of appointments, commitments and open questions from a synthetic WhatsApp export."
+prompt_file: "fixtures/sb_whatsapp_context.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/whatsapp_extract_schema.json"
+  required_fields: ["appointments", "commitments", "open_questions", "people"]
+  required_json_paths: ["appointments.0.source_message_id", "commitments.0.source_message_id"]
+  reference_keywords:
+    - "Anna"
+    - "Lena"
+    - "15.05."
+tags: ["secondbrain", "whatsapp", "communication", "json"]
+suites: ["secondbrain"]
+max_output_tokens: 260
+repetitions_default: 2

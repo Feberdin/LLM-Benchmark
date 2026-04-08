@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["route", "reason", "prepared_question", "should_use_ai_fallback"],
+  "properties": {
+    "route": { "type": "string" },
+    "reason": { "type": "string" },
+    "prepared_question": { "type": "string" },
+    "should_use_ai_fallback": { "type": "boolean" },
+    "safe_action": {
+      "type": ["string", "null"]
+    }
+  }
+}

@@ -1,0 +1,28 @@
+# Purpose: Tax enrichment benchmark for conservative, review-oriented structured outputs.
+# Input/Output: Expects strict JSON with tax classification, confidence, flags and formal validity.
+# Invariants: The model should stay cautious and avoid legal-advice style certainty.
+# Debugging: Inspect flags and formal_validity when the model overcommits on eligibility.
+
+test_case_id: "pk-tax-enrichment"
+category: "extraction_json"
+title: "Paperless-KIplus tax enrichment"
+description: "Benchmarks structured tax enrichment for a continuing-education invoice without crossing into legal advice."
+prompt_file: "fixtures/pk_tax_enrichment.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/tax_enrichment_schema.json"
+  expected_json_values:
+    tax_year: 2025
+    document_date: "2025-11-09"
+    issuer: "Fortbildungsinstitut Nord"
+    recipient: "Lena Berger"
+    total_amount: 389.0
+  reference_keywords:
+    - "review"
+    - "Fortbildungsinstitut Nord"
+tags: ["paperless_kiplus", "tax", "json"]
+suites: ["paperless_kiplus"]
+max_output_tokens: 260
+repetitions_default: 2

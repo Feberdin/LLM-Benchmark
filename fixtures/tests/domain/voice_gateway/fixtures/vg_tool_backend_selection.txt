@@ -1,0 +1,19 @@
+Return strict JSON with:
+- route
+- reason
+- prepared_question
+- should_use_ai_fallback
+- safe_action
+
+Utterance:
+"frage home assistant starte die sichere Routine fuer Laden aus"
+
+Allowlisted Home Assistant actions:
+- stop_wallbox_charging
+- turn_off_guest_room
+- start_evening_scene
+
+Rules:
+- Plan exactly one backend path.
+- Use a safe_action only when the action is allowlisted.
+- No prose outside JSON.

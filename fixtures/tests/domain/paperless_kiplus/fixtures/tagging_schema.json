@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["recommended_tags", "rejected_tags", "reason"],
+  "properties": {
+    "recommended_tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "rejected_tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "reason": { "type": "string" }
+  }
+}

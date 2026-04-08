@@ -1,0 +1,22 @@
+# Purpose: Keep generated artifacts, secrets and local tooling noise out of version control.
+# Input/Output: Used by Git during status/add operations.
+# Invariants: Runtime results and virtual environments are never committed by default.
+# Debugging: If an expected file is ignored, run `git check-ignore -v <path>` in a git-enabled clone.
+
+__pycache__/
+.pytest_cache/
+.coverage
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.DS_Store
+.env
+results/
+*.pyc
+*.pyo
+*.pyd
+htmlcov/

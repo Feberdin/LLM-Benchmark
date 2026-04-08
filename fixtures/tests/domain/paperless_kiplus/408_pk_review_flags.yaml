@@ -1,0 +1,34 @@
+# Purpose: Review-flag benchmark for uncertain, mixed and audit-sensitive tax cases.
+# Input/Output: Expects strict JSON with boolean review flags only.
+# Invariants: Unclear ownership, missing payment proof and cash payments should all push the case into review.
+# Debugging: Exact boolean mismatches are the main signal when safety logic weakens.
+
+test_case_id: "pk-review-flags"
+category: "robustness"
+title: "Paperless-KIplus review flags and uncertainty"
+description: "Tests whether unclear tax-relevant cases are escalated into the right review flags."
+prompt_file: "fixtures/pk_review_flags.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/review_flags_schema.json"
+  expected_json_values:
+    needs_review: true
+    needs_payment_proof: true
+    needs_person_assignment: true
+    needs_year_assignment: false
+    high_audit_relevance: true
+    mixed_private_and_tax_relevant: true
+    cash_payment_not_eligible: true
+tags: ["paperless_kiplus", "review", "tax", "safety"]
+suites: ["paperless_kiplus"]
+max_output_tokens: 180
+repetitions_default: 2
+scoring_weights:
+  quality: 0.25
+  format: 0.20
+  latency: 0.10
+  stability: 0.10
+  instruction: 0.25
+  reproducibility: 0.10

@@ -1,0 +1,30 @@
+# Purpose: Very short chat benchmark for a first latency and clarity comparison across models.
+# Input/Output: Expects a concise, plain-text operational answer without excessive detail.
+# Invariants: The answer should mention both an immediate action and a likely root cause category.
+# Debugging: If answers ramble, inspect output token budgets and instruction-following behavior.
+
+test_case_id: "quick-chat-triage"
+category: "chat"
+title: "Quick operational triage answer"
+description: "Short chat task to compare usefulness and latency on a realistic ops question."
+prompt: |
+  A deployment started returning HTTP 503 errors two minutes after release.
+  Answer in 3-4 sentences:
+  1. state the most likely next action
+  2. state one likely root cause category
+  3. keep the tone operational and concise
+expected_format: "text"
+validation_rules:
+  contains_all:
+    - "rollback"
+  contains_none:
+    - "```"
+  min_length_chars: 80
+  max_length_chars: 280
+  reference_keywords:
+    - "capacity"
+    - "configuration"
+tags: ["quick_compare", "chat", "ops"]
+suites: ["quick_compare"]
+max_output_tokens: 140
+repetitions_default: 2

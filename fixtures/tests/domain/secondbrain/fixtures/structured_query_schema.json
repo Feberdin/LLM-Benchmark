@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["query_type", "items", "answer", "cited_items", "confidence"],
+  "properties": {
+    "query_type": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item_id", "item_type", "title", "source_id"],
+        "properties": {
+          "item_id": { "type": "string" },
+          "item_type": { "type": "string" },
+          "title": { "type": "string" },
+          "due_date": { "type": ["string", "null"] },
+          "source_id": { "type": "string" }
+        }
+      }
+    },
+    "answer": { "type": "string" },
+    "cited_items": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  }
+}

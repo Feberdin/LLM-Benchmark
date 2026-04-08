@@ -1,0 +1,26 @@
+# Purpose: Core Paperless-KIplus classification benchmark for structured metadata output.
+# Input/Output: Expects strict JSON for document type, correspondent, storage path, tags, date and AI note.
+# Invariants: The output should be practical for direct API consumption and stay sparse in its tagging.
+# Debugging: Schema drift usually appears as extra keys or overly verbose tags.
+
+test_case_id: "pk-document-classification"
+category: "classification"
+title: "Paperless-KIplus document classification"
+description: "Benchmarks realistic document classification output for a standard telecom invoice."
+prompt_file: "fixtures/pk_document_classification.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/document_classification_schema.json"
+  expected_json_values:
+    document_type: "invoice"
+    correspondent: "Telekom Deutschland GmbH"
+    document_date: "2026-03-04"
+  reference_keywords:
+    - "telecom"
+    - "2026"
+tags: ["paperless_kiplus", "classification", "json"]
+suites: ["paperless_kiplus"]
+max_output_tokens: 220
+repetitions_default: 2

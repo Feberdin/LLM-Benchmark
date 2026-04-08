@@ -1,0 +1,46 @@
+# Purpose: JSON extraction benchmark for incident-style text that should map into a stable object schema.
+# Input/Output: Expects one JSON object with required fields and exact severity extraction.
+# Invariants: The benchmark should reject prose wrappers and malformed JSON instead of guessing.
+# Debugging: If parsing fails, inspect the JSON extractor and the response format capabilities of the model.
+
+test_case_id: "extract-incident-json"
+category: "extraction_json"
+title: "Extract incident facts into JSON"
+description: "Transform a short incident report into a deterministic JSON object for downstream automation."
+prompt: |
+  Read the incident report and return only a JSON object with the fields:
+  incident_id, severity, affected_service, action_required.
+
+  Incident report:
+  Incident INC-4821 triggered at 07:14 UTC.
+  The billing-api returned 502 responses for 12 minutes after a bad deployment.
+  Customer impact was partial checkout failure in EU regions.
+  Severity is high and rollback is still required.
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["incident_id", "severity", "affected_service", "action_required"]
+    properties:
+      incident_id:
+        type: "string"
+      severity:
+        type: "string"
+        enum: ["low", "medium", "high", "critical"]
+      affected_service:
+        type: "string"
+      action_required:
+        type: "string"
+  required_fields: ["incident_id", "severity", "affected_service", "action_required"]
+  expected_json_values:
+    severity: "high"
+    incident_id: "INC-4821"
+  reference_keywords:
+    - "billing-api"
+tags: ["core", "json", "structured-output"]
+suites: ["core", "api_replacement"]
+max_output_tokens: 180
+repetitions_default: 2

@@ -1,0 +1,15 @@
+Return strict JSON with:
+- action
+- clarification_question
+- reason
+
+Utterance:
+"Schalte das bitte aus."
+
+Context:
+- There are multiple possible targets: wallbox, guest room light, ventilation.
+- No explicit prefix was provided.
+
+Rules:
+- Ask a clarifying question instead of guessing.
+- Keep the clarification Alexa-friendly.

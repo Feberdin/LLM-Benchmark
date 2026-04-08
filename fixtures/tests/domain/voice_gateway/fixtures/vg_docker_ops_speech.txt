@@ -1,0 +1,17 @@
+Answer in plain text for Alexa.
+
+Constraints:
+- Max 220 characters.
+- Mention the most important issue first.
+- Speakable German, no markdown.
+
+Docker snapshot:
+[
+  {"name": "jellyfin", "status": "running", "health": "healthy"},
+  {"name": "paperless-consumer", "status": "running", "health": "unhealthy"},
+  {"name": "postgres", "status": "running", "health": "healthy"},
+  {"name": "secondbrain-worker", "status": "restarting", "health": "unknown"}
+]
+
+Question:
+Welche Container sind kritisch und was pruefe ich zuerst?

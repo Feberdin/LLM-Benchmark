@@ -1,0 +1,24 @@
+# Purpose: Shortcut benchmark for the dedicated "latest mail" intent in the voice gateway.
+# Input/Output: Expects strict JSON with the dedicated route and a backend-ready prepared question.
+# Invariants: The utterance must not be misclassified as a general AI or SecondBrain query.
+# Debugging: Route drift is the key signal here; inspect `route` before anything else.
+
+test_case_id: "vg-latest-mail-shortcut"
+category: "classification"
+title: "Voice gateway latest-mail shortcut"
+description: "Measures whether the special latest-mail shortcut is recognized as its own route."
+prompt_file: "fixtures/vg_latest_mail_shortcut.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/routing_plan_schema.json"
+  expected_json_values:
+    route: "latest_mail"
+    should_use_ai_fallback: false
+  reference_keywords:
+    - "letzten Mail"
+tags: ["voice_gateway", "latest_mail", "routing"]
+suites: ["voice_gateway"]
+max_output_tokens: 180
+repetitions_default: 2

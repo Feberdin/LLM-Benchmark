@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "needs_review",
+    "needs_payment_proof",
+    "needs_person_assignment",
+    "needs_year_assignment",
+    "high_audit_relevance",
+    "mixed_private_and_tax_relevant",
+    "cash_payment_not_eligible"
+  ],
+  "properties": {
+    "needs_review": { "type": "boolean" },
+    "needs_payment_proof": { "type": "boolean" },
+    "needs_person_assignment": { "type": "boolean" },
+    "needs_year_assignment": { "type": "boolean" },
+    "high_audit_relevance": { "type": "boolean" },
+    "mixed_private_and_tax_relevant": { "type": "boolean" },
+    "cash_payment_not_eligible": { "type": "boolean" }
+  }
+}

@@ -1,0 +1,17 @@
+Answer in plain text for Alexa.
+
+Constraints:
+- Max 160 characters.
+- One or two short sentences.
+- Easy to speak aloud.
+- No markdown, no bullet points.
+
+Structured context:
+{
+  "battery_soc_percent": 67,
+  "solar_power_kw": 4.2,
+  "wallbox_status": "idle"
+}
+
+Question:
+Wie steht mein Haus gerade da?

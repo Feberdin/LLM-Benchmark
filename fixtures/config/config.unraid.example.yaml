@@ -1,0 +1,102 @@
+# Purpose: Production-oriented Unraid example config for the first real three-model comparison.
+# Input/Output: Read from `/config/config.unraid.example.yaml` inside the container.
+# Invariants: The same prompts and conservative sampling defaults are used across all three model targets.
+# Debugging: If a model fails, first check the matching base URL, model name, timeout and optional API key env var.
+#
+# Why these defaults exist:
+# - concurrency: 1
+#   Older CPU-heavy servers can become unresponsive when multiple large local requests run in parallel.
+# - warmup_runs: 1
+#   Captures a realistic warmed state without wasting too much time on startup.
+# - default_repetitions: 2
+#   Gives a first reproducibility signal while keeping the total runtime manageable.
+# - default_timeout_seconds: 300
+#   Conservative for slower local CPU inference and larger models.
+# - max_retries: 2 with exponential backoff from 2s
+#   Enough to survive temporary network hiccups or backend busy states without hiding unstable systems.
+# - stream_for_ttft: false
+#   Disabled by default because not every local OpenAI-compatible runtime emits comparable streaming telemetry.
+# - temperature: 0.0 and top_p: 1.0
+#   Keeps the comparison deterministic and fair for a benchmark context.
+
+version: "1"
+benchmark_name: "feberdin-llm-benchmark-unraid"
+description: "Unraid-focused benchmark profile for Mistral local, Qwen local and OpenAI reference."
+
+run_defaults:
+  concurrency: 1
+  warmup_runs: 1
+  default_repetitions: 2
+  max_retries: 2
+  retry_backoff_seconds: 2.0
+  default_timeout_seconds: 300
+  stream_for_ttft: false
+  capture_raw_response_text: true
+  include_warmup_in_raw_outputs: true
+  prompt_version: "2026-04-unraid-quickstart"
+  latency_target_ms: 12000
+  tests_dir: "/app/tests"
+  output_dir: "/app/results"
+  scoring_weights:
+    quality: 0.35
+    format: 0.25
+    latency: 0.20
+    stability: 0.10
+    reproducibility: 0.10
+    instruction: 0.00
+
+models:
+  # Local Mistral target.
+  # Change `base_url` if your OpenAI-compatible local runtime is not reachable under the shown IP/port.
+  # Change `model_name` to the exact identifier exposed by your runtime.
+  # Set `enabled: false` to temporarily exclude this model from a run.
+  - id: "mistral_local"
+    label: "Mistral Local"
+    provider: "local"
+    api_type: "openai_compatible"
+    base_url: "${MISTRAL_BASE_URL:-http://192.168.178.10:11434/v1}"
+    model_name: "${MISTRAL_MODEL_NAME:-mistral-small-3.2}"
+    enabled: true
+    default_parameters:
+      temperature: 0.0
+      top_p: 1.0
+    timeout_seconds: 300
+    supports_streaming: true
+    supports_tools: true
+    supports_structured_output: false
+
+  # Local Qwen target.
+  # Use a separate endpoint only if your runtime exposes Qwen behind another host/port.
+  - id: "qwen_local"
+    label: "Qwen Local"
+    provider: "local"
+    api_type: "openai_compatible"
+    base_url: "${QWEN_BASE_URL:-http://192.168.178.10:11434/v1}"
+    model_name: "${QWEN_MODEL_NAME:-qwen3.5-35b-a3b}"
+    enabled: true
+    default_parameters:
+      temperature: 0.0
+      top_p: 1.0
+    timeout_seconds: 300
+    supports_streaming: true
+    supports_tools: true
+    supports_structured_output: false
+
+  # External OpenAI reference model.
+  # `api_key_env` points to the Docker environment variable that must contain the secret.
+  # Change `model_name` when you want to benchmark another OpenAI reference model.
+  - id: "openai_reference"
+    label: "OpenAI Reference"
+    provider: "openai"
+    api_type: "openai"
+    base_url: "https://api.openai.com/v1"
+    model_name: "${OPENAI_MODEL_NAME:-gpt-4.1-mini}"
+    api_key_env: "OPENAI_API_KEY"
+    enabled: true
+    default_parameters:
+      temperature: 0.0
+      top_p: 1.0
+    timeout_seconds: 120
+    supports_streaming: true
+    supports_tools: true
+    supports_structured_output: true

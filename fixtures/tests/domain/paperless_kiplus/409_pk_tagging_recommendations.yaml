@@ -1,0 +1,24 @@
+# Purpose: Tagging benchmark for sparse, justified tag recommendations in Paperless-KIplus.
+# Input/Output: Expects strict JSON with recommended tags, rejected tags and a concise reason.
+# Invariants: The model should avoid tag explosion and only add year or tax tags when they are clearly justified.
+# Debugging: Over-tagging is easy to spot in `recommended_tags`; inspect rejected_tags for noise handling.
+
+test_case_id: "pk-tagging-recommendations"
+category: "classification"
+title: "Paperless-KIplus tagging recommendations"
+description: "Measures whether the model proposes sparse, useful tags for a tax-related official notice."
+prompt_file: "fixtures/pk_tagging_recommendations.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/tagging_schema.json"
+  required_fields: ["recommended_tags", "rejected_tags", "reason"]
+  reference_keywords:
+    - "steuer"
+    - "2025"
+    - "Finanzamt"
+tags: ["paperless_kiplus", "tagging", "classification"]
+suites: ["paperless_kiplus"]
+max_output_tokens: 180
+repetitions_default: 2

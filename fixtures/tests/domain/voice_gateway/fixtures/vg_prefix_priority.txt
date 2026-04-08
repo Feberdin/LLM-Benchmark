@@ -1,0 +1,14 @@
+Return strict JSON with:
+- route
+- reason
+- prepared_question
+- should_use_ai_fallback
+- safe_action
+
+User utterance:
+"frage docker ob paperless ngx laeuft und ob etwas ungesund ist"
+
+Rules:
+- Explicit prefixes take priority over generic intent classification.
+- Keep `prepared_question` short and backend-ready.
+- This request does not need a Home Assistant action.

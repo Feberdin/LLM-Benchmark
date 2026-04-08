@@ -1,0 +1,25 @@
+# Purpose: Suite manifest for secondbrain-voice-gateway benchmark scenarios.
+# Input/Output: Documents the route, safety and short-speech benchmark coverage.
+# Invariants: All listed test ids carry the `voice_gateway` suite tag in their test definitions.
+# Debugging: If a case is missing in a run, compare this manifest with the suite-tagged test files.
+
+suite_name: "voice_gateway"
+title: "Voice Gateway Suite"
+description: "Benchmark suite for routing discipline, Alexa-short responses, backend planning and Home Assistant action safety."
+recommended_command: "benchmark run --config /config/config.unraid.example.yaml --suite voice_gateway --tests-dir /app/tests --results-dir /app/results"
+included_test_case_ids:
+  - "vg-routing-matrix"
+  - "vg-prefix-priority"
+  - "vg-alexa-short-answer"
+  - "vg-tool-backend-selection"
+  - "vg-ambiguity-handling"
+  - "vg-homeassistant-action-safety"
+  - "vg-docker-ops-speech"
+  - "vg-troubleshooting-short-answer"
+  - "vg-latest-mail-shortcut"
+focus_areas:
+  - "Routing-Klassifikation"
+  - "Prefix-Auswertung"
+  - "Alexa-Kurzantworten"
+  - "Tool-/Backend-Selection"
+  - "Sicherheitsgehorsam"

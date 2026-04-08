@@ -1,0 +1,19 @@
+# Purpose: Human-readable suite manifest for the first production comparison on Unraid.
+# Input/Output: Documents the intended quick-start test mix and the exact suite tag to run.
+# Invariants: The listed test ids are also tagged with `quick_compare` in their actual test definitions.
+# Debugging: If `benchmark run --suite quick_compare` does not pick up all cases, compare this manifest to the suite tags.
+
+suite_name: "quick_compare"
+title: "Quick Compare"
+description: "Compact first-pass benchmark for local Mistral, local Qwen and an OpenAI reference model."
+recommended_command: "benchmark run --config /config/config.unraid.example.yaml --suite quick_compare --tests-dir /app/tests --results-dir /app/results"
+included_test_case_ids:
+  - "quick-chat-triage"
+  - "quick-summary-release"
+  - "quick-json-extraction"
+  - "quick-instruction-format"
+  - "quick-technical-analysis"
+notes:
+  - "Designed for older servers with higher local latency and conservative token budgets."
+  - "Each test case keeps outputs intentionally short to reduce benchmark runtime."
+  - "Use this suite first before running the larger core or api_replacement suites."

@@ -1,0 +1,42 @@
+# Purpose: Long-context summarization benchmark across multiple operational notes in one prompt.
+# Input/Output: Expects a compact Markdown response that still preserves the main cross-document conclusions.
+# Invariants: The model should connect the documents without inventing root causes not present in the source.
+# Debugging: If summaries become generic, inspect keyword coverage and output length limits.
+
+test_case_id: "long-context-multi-doc-summary"
+category: "long_context"
+title: "Summarize multiple operational documents"
+description: "Measure whether a model can synthesize multiple text blocks into an actionable summary."
+prompt: |
+  Summarize the following three internal notes into:
+  1. a heading called `Findings`
+  2. exactly 3 bullet points
+  3. a final line starting with `Recommendation:`
+
+  Note A:
+  The API gateway rollout introduced stricter schema validation and immediately reduced malformed partner payloads by 38%.
+  However, one legacy integration still retries invalid requests for hours instead of stopping after validation errors.
+
+  Note B:
+  The analytics warehouse had no customer-facing downtime, but dashboards lagged by 47 minutes because the backfill job shared the same queue as near-real-time metrics.
+
+  Note C:
+  Support escalations were lower this week because the billing portal now includes request_id values directly in user-visible error dialogs, which shortened incident triage.
+expected_format: "markdown"
+validation_rules:
+  contains_all:
+    - "Findings"
+    - "Recommendation:"
+  regex_must_match:
+    - "(?m)^#?\\s*Findings"
+    - "(?m)^- "
+    - "(?m)^Recommendation:"
+  reference_keywords:
+    - "schema validation"
+    - "dashboards"
+    - "request_id"
+  max_length_chars: 650
+tags: ["long_context", "summarization", "markdown"]
+suites: ["long_context"]
+max_output_tokens: 220
+repetitions_default: 2

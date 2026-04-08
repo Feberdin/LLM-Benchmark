@@ -1,0 +1,16 @@
+Return strict JSON with exactly these keys: u1, u2, u3, u4, u5.
+Each value must be exactly one route name from this list:
+- secondbrain
+- home_assistant
+- docker
+- troubleshooting
+- explanation
+- general_ai
+- latest_mail
+
+Utterances:
+u1: "frage paperless welche vertraege laufen naechsten monat aus"
+u2: "frage home assistant wie voll ist die hausbatterie"
+u3: "frage docker welcher container ist gerade ungesund"
+u4: "warum liefert mein alexa skill ploetzlich 401 zurueck"
+u5: "lies mir den Inhalt meiner letzten Mail vor"

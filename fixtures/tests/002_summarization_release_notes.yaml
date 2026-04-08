@@ -1,0 +1,37 @@
+# Purpose: Summarization benchmark for short operational release notes with a concrete output shape.
+# Input/Output: Expects Markdown bullets plus a final risk line that helps compare instruction following.
+# Invariants: The answer should compress the source notes and still retain the most operationally relevant changes.
+# Debugging: If the format is off, check the regex and forbidden markdown/code fence rules.
+
+test_case_id: "summarize-release-notes"
+category: "summarization"
+title: "Summarize release notes with risk callout"
+description: "Summarize short engineering release notes into crisp bullets and one operational risk line."
+prompt: |
+  Summarize the following release notes into exactly 3 bullet points followed by one line that starts with `Risk:`.
+
+  Release notes:
+  - Added retry handling for upstream 429 errors in the webhook worker.
+  - Fixed a bug where malformed JSON responses were silently retried forever.
+  - Introduced structured logging with request_id and tenant_id masking.
+  - Deprecated the legacy `/v0/report` endpoint; removal planned next sprint.
+expected_format: "markdown"
+validation_rules:
+  contains_all:
+    - "Risk:"
+    - "429"
+    - "JSON"
+  regex_must_match:
+    - "(?m)^- "
+    - "(?m)^Risk:"
+  contains_none:
+    - "```"
+  min_length_chars: 80
+  max_length_chars: 500
+  reference_keywords:
+    - "structured logging"
+    - "deprecated"
+tags: ["core", "summarization"]
+suites: ["core"]
+max_output_tokens: 180
+repetitions_default: 2

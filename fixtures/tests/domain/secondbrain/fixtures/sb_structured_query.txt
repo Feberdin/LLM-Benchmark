@@ -1,0 +1,44 @@
+Return strict JSON with:
+- query_type
+- items
+- answer
+- cited_items
+- confidence
+
+Question:
+Welche Vertraege laufen in den naechsten 30 Tagen aus oder verlangen eine Aktion?
+
+Today:
+2026-04-18
+
+Structured context:
+{
+  "contracts": [
+    {
+      "item_id": "contract-EW-2026",
+      "item_type": "energy_contract",
+      "title": "Energiewerk Nord Stromvertrag",
+      "due_date": "2026-04-23",
+      "source_id": "SB-DOC-2026-0412"
+    },
+    {
+      "item_id": "contract-ins-2026",
+      "item_type": "insurance_contract",
+      "title": "Hausrat Plus Jahrespolice",
+      "due_date": "2026-06-30",
+      "source_id": "SB-DOC-2026-0322"
+    },
+    {
+      "item_id": "contract-gym-2026",
+      "item_type": "membership",
+      "title": "Studio Hafen Monatsabo",
+      "due_date": "2026-04-27",
+      "source_id": "SB-MAIL-2026-0407"
+    }
+  ]
+}
+
+Rules:
+- `query_type` must be `expiring_contracts`.
+- Include only matching items from the next 30 days.
+- Keep the answer short and evidence-based.

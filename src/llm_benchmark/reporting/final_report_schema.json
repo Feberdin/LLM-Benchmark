@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLM Benchmark Final Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "benchmark_info",
+    "environment_info",
+    "models",
+    "test_suites",
+    "aggregate_scores",
+    "rankings",
+    "strengths",
+    "weaknesses",
+    "anomalies",
+    "failed_runs",
+    "recommendations",
+    "fairness_notes",
+    "raw_artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "benchmark_info": {
+      "type": "object",
+      "required": [
+        "benchmark_run_id",
+        "benchmark_name",
+        "run_started_at",
+        "run_finished_at",
+        "suite",
+        "total_records",
+        "measured_records",
+        "warmup_records"
+      ]
+    },
+    "environment_info": {
+      "type": "object"
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["model_id", "model_label", "provider", "model_name"]
+      }
+    },
+    "test_suites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["suite_name", "test_count", "test_case_ids", "categories"]
+      }
+    },
+    "aggregate_scores": {
+      "type": "object",
+      "required": ["overall_average_total_score", "by_model", "by_category", "by_test_case"]
+    },
+    "rankings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rank", "model_id", "model_label", "avg_total_score"]
+      }
+    },
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["model_id", "summary"]
+      }
+    },
+    "weaknesses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["model_id", "summary"]
+      }
+    },
+    "anomalies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "summary"]
+      }
+    },
+    "failed_runs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["model_id", "test_case_id", "success", "validation_passed"]
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["priority", "summary"]
+      }
+    },
+    "fairness_notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "raw_artifacts": {
+      "type": "object",
+      "required": [
+        "raw_runs_jsonl",
+        "raw_runs_csv",
+        "summary_by_model_csv",
+        "summary_by_category_csv",
+        "final_report_json",
+        "analysis_input_json",
+        "final_report_md",
+        "final_report_html"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

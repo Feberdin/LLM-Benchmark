@@ -1,0 +1,11 @@
+Write a concise factual summary in plain text.
+Length limit: 420 characters.
+Do not invent information that is not present.
+
+Document excerpt:
+Am 14.04.2026 bestaetigen wir Ihnen den Eingang Ihres Antrags auf Kostenerstattung fuer die
+zahnmedizinische Behandlung vom 28.03.2026. Nach Pruefung erkennen wir 450,00 EUR als
+erstattungsfaehig an. Der Auszahlungsbetrag wird innerhalb von sieben Bankarbeitstagen auf
+das bekannte Girokonto ueberwiesen. Bitte reichen Sie die fehlende Quittung fuer das
+verwendete Provisorium bis spaetestens 05.05.2026 nach, falls Sie auch diesen Anteil
+geltend machen moechten.

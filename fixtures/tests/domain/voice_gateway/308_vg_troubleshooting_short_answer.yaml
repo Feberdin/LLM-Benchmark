@@ -1,0 +1,22 @@
+# Purpose: Troubleshooting benchmark for ultra-short spoken guidance from a known knowledge snippet.
+# Input/Output: Expects concise plain text that highlights the first recommended check.
+# Invariants: The first troubleshooting step must stay prominent and easily speakable.
+# Debugging: If the answer mentions later steps first, inspect keyword order in the raw text.
+
+test_case_id: "vg-troubleshooting-short-answer"
+category: "instruction_following"
+title: "Voice gateway troubleshooting short answer"
+description: "Tests whether the model can turn a troubleshooting snippet into a short Alexa-friendly response."
+prompt_file: "fixtures/vg_troubleshooting_short_answer.txt"
+expected_format: "text"
+validation_rules:
+  contains_all:
+    - "Refresh Token"
+  min_length_chars: 40
+  max_length_chars: 220
+  contains_none:
+    - "```"
+tags: ["voice_gateway", "troubleshooting", "speech"]
+suites: ["voice_gateway"]
+max_output_tokens: 100
+repetitions_default: 2

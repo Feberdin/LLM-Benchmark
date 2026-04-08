@@ -1,0 +1,44 @@
+# Purpose: Short technical analysis benchmark that rewards precise bug identification in a compact JSON schema.
+# Input/Output: Expects JSON with a boolean bug flag, a severity level and a recommended fix.
+# Invariants: The model should identify the missing await bug and not drift into unrelated code style advice.
+# Debugging: If quality is weak, compare the generated fix against the expected reference keywords.
+
+test_case_id: "coding-missing-await"
+category: "coding"
+title: "Review a Python async bug"
+description: "Evaluate whether the model can identify a concrete async bug and propose a focused fix."
+prompt: |
+  Review the following Python snippet and return only JSON with:
+  bug_present, severity, recommended_fix.
+
+  ```python
+  async def save_user(repo, payload):
+      repo.write(payload)
+      return {"status": "ok"}
+  ```
+
+  Assume `repo.write` is an async coroutine that persists the payload.
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["bug_present", "severity", "recommended_fix"]
+    properties:
+      bug_present:
+        type: "boolean"
+      severity:
+        type: "string"
+      recommended_fix:
+        type: "string"
+  expected_json_values:
+    bug_present: true
+  reference_keywords:
+    - "await"
+    - "repo.write"
+tags: ["api_replacement", "coding", "analysis"]
+suites: ["api_replacement"]
+max_output_tokens: 180
+repetitions_default: 2

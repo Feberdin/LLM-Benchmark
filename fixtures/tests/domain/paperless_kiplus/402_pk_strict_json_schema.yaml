@@ -1,0 +1,27 @@
+# Purpose: Strict JSON compatibility benchmark for Paperless-KIplus API replacement scenarios.
+# Input/Output: Expects parseable JSON with no markdown and no extra keys.
+# Invariants: OCR noise must not break schema discipline.
+# Debugging: If the model emits commentary, the parser and `contains_none` checks will surface it clearly.
+
+test_case_id: "pk-strict-json-schema"
+category: "extraction_json"
+title: "Paperless-KIplus strict JSON schema discipline"
+description: "Measures whether messy OCR-style insurance input still produces exact schema-compatible JSON."
+prompt_file: "fixtures/pk_strict_json_schema.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/document_classification_schema.json"
+  expected_json_values:
+    document_type: "insurance_invoice"
+    correspondent: "Nordlicht Versicherung AG"
+    document_date: "2026-01-11"
+  contains_none:
+    - "```"
+  reference_keywords:
+    - "NF-66210"
+tags: ["paperless_kiplus", "json", "schema"]
+suites: ["paperless_kiplus"]
+max_output_tokens: 220
+repetitions_default: 2

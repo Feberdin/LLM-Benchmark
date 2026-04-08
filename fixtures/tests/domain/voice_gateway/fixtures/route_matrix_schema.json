@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["u1", "u2", "u3", "u4", "u5"],
+  "properties": {
+    "u1": { "type": "string" },
+    "u2": { "type": "string" },
+    "u3": { "type": "string" },
+    "u4": { "type": "string" },
+    "u5": { "type": "string" }
+  }
+}

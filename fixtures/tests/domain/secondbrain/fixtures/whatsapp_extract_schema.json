@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["appointments", "commitments", "open_questions", "people"],
+  "properties": {
+    "appointments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "date", "source_message_id"],
+        "properties": {
+          "title": { "type": "string" },
+          "date": { "type": "string" },
+          "source_message_id": { "type": "string" }
+        }
+      }
+    },
+    "commitments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["person", "commitment", "source_message_id"],
+        "properties": {
+          "person": { "type": "string" },
+          "commitment": { "type": "string" },
+          "source_message_id": { "type": "string" }
+        }
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "people": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

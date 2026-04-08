@@ -1,0 +1,34 @@
+# Purpose: Tool calling benchmark for OpenAI-compatible function-call style workflows.
+# Input/Output: Expects the model to call the provided tool instead of fabricating weather data.
+# Invariants: A missing tool call is a failure even if the prose answer sounds plausible.
+# Debugging: If models answer directly, inspect tool support and whether the backend honors the `tools` payload.
+
+test_case_id: "tool-call-weather"
+category: "function_calling"
+title: "Use a weather lookup tool"
+description: "Checks whether the endpoint can trigger a function/tool call in an OpenAI-compatible workflow."
+prompt: |
+  A user asks: "Should I expect rain in Berlin tomorrow morning?"
+  Decide whether you need external data. If yes, call the tool.
+expected_format: "tool_call"
+validation_rules:
+  tool_call_required: true
+  expected_tool_name: "lookup_weather"
+tools:
+  - type: "function"
+    function:
+      name: "lookup_weather"
+      description: "Fetches the forecast for a city and time window."
+      parameters:
+        type: "object"
+        additionalProperties: false
+        required: ["city", "time_window"]
+        properties:
+          city:
+            type: "string"
+          time_window:
+            type: "string"
+tags: ["api_replacement", "tools"]
+suites: ["api_replacement"]
+max_output_tokens: 120
+repetitions_default: 2

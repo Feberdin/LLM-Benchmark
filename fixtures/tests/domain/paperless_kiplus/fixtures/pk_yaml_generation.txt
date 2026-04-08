@@ -1,0 +1,15 @@
+Generate a complete valid YAML configuration for Paperless-KIplus.
+
+Rules:
+- Output raw YAML only.
+- No markdown fences.
+- Include exactly the required top-level fields from the target schema.
+- Keep defaults conservative for a stable long-running Home Assistant setup.
+
+Assumptions:
+- Paperless runs at http://paperless-ngx:8000
+- OCR language is deu
+- Only documents tagged `needs-ai` should be processed
+- Dry run should be enabled by default
+- Duplicate handling should prefer metadata-only reuse
+- Tax enrichment should be enabled but review-oriented

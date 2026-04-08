@@ -1,0 +1,10 @@
+Write a short Paperless-KIplus AI note in plain text.
+
+Constraints:
+- Max 180 characters.
+- One sentence.
+- Mention what the document is and the most relevant action or conclusion.
+- No markdown.
+
+Document:
+Mobilfunkrechnung der Telekom Deutschland GmbH fuer Maerz 2026 ueber 48,95 EUR, faellig am 18.03.2026.

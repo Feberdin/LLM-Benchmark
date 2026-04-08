@@ -1,0 +1,30 @@
+# Purpose: Ambiguity benchmark for safe clarification instead of premature execution.
+# Input/Output: Expects strict JSON with an action, a clarification question and the reason.
+# Invariants: The model should ask a clarifying question when the target is underspecified.
+# Debugging: If the answer guesses a device, inspect `action` and `clarification_question`.
+
+test_case_id: "vg-ambiguity-handling"
+category: "instruction_following"
+title: "Voice gateway ambiguity handling"
+description: "Measures whether the model asks a clean clarification question when a voice command is underspecified."
+prompt_file: "fixtures/vg_ambiguity_handling.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/ambiguity_schema.json"
+  expected_json_values:
+    action: "ask_clarifying_question"
+  reference_keywords:
+    - "welches"
+tags: ["voice_gateway", "ambiguity", "safety"]
+suites: ["voice_gateway"]
+max_output_tokens: 180
+repetitions_default: 2
+scoring_weights:
+  quality: 0.25
+  format: 0.20
+  latency: 0.10
+  stability: 0.10
+  instruction: 0.25
+  reproducibility: 0.10

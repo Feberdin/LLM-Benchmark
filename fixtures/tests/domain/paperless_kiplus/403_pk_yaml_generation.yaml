@@ -1,0 +1,30 @@
+# Purpose: YAML generation benchmark for full Home Assistant style Paperless-KIplus configuration output.
+# Input/Output: Expects raw YAML that matches the required runtime schema exactly.
+# Invariants: No markdown fences and no missing required sections are allowed.
+# Debugging: YAML parse or schema failures point directly to formatting and config completeness issues.
+
+test_case_id: "pk-yaml-generation"
+category: "instruction_following"
+title: "Paperless-KIplus full YAML generation"
+description: "Benchmarks whether a model can generate a complete, valid, production-minded YAML config without markdown wrapping."
+prompt_file: "fixtures/pk_yaml_generation.txt"
+expected_format: "yaml"
+validation_rules:
+  json_schema_file: "fixtures/yaml_runtime_config_schema.json"
+  contains_none:
+    - "```"
+  reference_keywords:
+    - "basis_config"
+    - "prechecks"
+    - "tax_enrichment"
+tags: ["paperless_kiplus", "yaml", "configuration"]
+suites: ["paperless_kiplus"]
+max_output_tokens: 420
+repetitions_default: 2
+scoring_weights:
+  quality: 0.25
+  format: 0.30
+  latency: 0.10
+  stability: 0.10
+  instruction: 0.15
+  reproducibility: 0.10

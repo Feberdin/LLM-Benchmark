@@ -1,0 +1,52 @@
+Answer only from the provided SecondBrain context.
+Return strict JSON with the fields:
+- answer
+- cited_items
+- confidence
+- unsupported_claims
+
+Rules:
+- Use only the context below.
+- If the answer is not fully supported, say that clearly inside `answer`.
+- `unsupported_claims` must stay empty if you made no unsupported claims.
+
+Question:
+Welche offenen Fristen und naechsten Schritte betreffen Lena Berger im April und Mai 2026?
+
+Context bundle:
+[
+  {
+    "source_id": "SB-DOC-2026-0412",
+    "type": "contract_note",
+    "title": "Energieliefervertrag Energiewerk Nord",
+    "counterparty": "Energiewerk Nord GmbH",
+    "signed_at": "2025-05-01",
+    "cancellation_deadline": "2026-04-23",
+    "renewal_date": "2026-05-01",
+    "summary": "Der Stromvertrag verlaengert sich um 12 Monate, wenn nicht spaetestens am 23.04.2026 gekuendigt wird."
+  },
+  {
+    "source_id": "SB-MAIL-2026-0416",
+    "type": "mail",
+    "from": "beratung@vorsorgekontor.de",
+    "subject": "Unterlagen fuer Depotuebertrag",
+    "received_at": "2026-04-16T08:44:00Z",
+    "summary": "Bitte senden Sie die unterschriebene Uebertragsvollmacht bis zum 29.04.2026 zurueck."
+  },
+  {
+    "source_id": "SB-CAL-2026-0503",
+    "type": "calendar_event",
+    "title": "Zahnarzt Kontrolltermin",
+    "start": "2026-05-03T09:30:00+02:00",
+    "location": "Praxis Dr. Mertens",
+    "notes": "Versichertenkarte mitbringen."
+  },
+  {
+    "source_id": "SB-FACT-2026-009",
+    "type": "fact",
+    "label": "Depotvollmacht fehlt noch",
+    "status": "open",
+    "owner": "Lena Berger",
+    "updated_at": "2026-04-17T07:10:00Z"
+  }
+]

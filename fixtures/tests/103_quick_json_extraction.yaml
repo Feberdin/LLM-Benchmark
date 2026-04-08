@@ -1,0 +1,38 @@
+# Purpose: Fast JSON extraction benchmark for a simple structured automation target.
+# Input/Output: Expects one parseable JSON object and no surrounding prose.
+# Invariants: The severity and service name should be extracted correctly.
+# Debugging: If local models drift into prose, inspect response_format support and raw outputs.
+
+test_case_id: "quick-json-extraction"
+category: "extraction_json"
+title: "Quick JSON extraction"
+description: "Short structured-output test for a first comparison between local and external models."
+prompt: |
+  Return only JSON with the keys severity, service and action.
+
+  Incident:
+  The auth-api failed login requests for 9 minutes after a certificate rollover.
+  Severity is medium and the next action is to rotate the broken certificate bundle.
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["severity", "service", "action"]
+    properties:
+      severity:
+        type: "string"
+      service:
+        type: "string"
+      action:
+        type: "string"
+  required_fields: ["severity", "service", "action"]
+  expected_json_values:
+    severity: "medium"
+    service: "auth-api"
+tags: ["quick_compare", "json"]
+suites: ["quick_compare"]
+max_output_tokens: 120
+repetitions_default: 2

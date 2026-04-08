@@ -1,0 +1,88 @@
+{#
+Purpose: Markdown benchmark report template for GitHub, tickets and lightweight sharing.
+Input/Output: Receives the final report JSON-like payload and renders a readable Markdown summary.
+Important invariants: Keep tables concise enough to render well in GitHub and chat tools.
+How to debug: If sections are missing, inspect the report payload keys before changing the template.
+#}
+# LLM Benchmark Report
+
+## Benchmark Info
+
+- Run ID: `{{ report.benchmark_info.benchmark_run_id }}`
+- Benchmark: `{{ report.benchmark_info.benchmark_name }}`
+- Suite: `{{ report.benchmark_info.suite }}`
+- Started: `{{ report.benchmark_info.run_started_at }}`
+- Finished: `{{ report.benchmark_info.run_finished_at }}`
+- Records: `{{ report.benchmark_info.measured_records }}` measured, `{{ report.benchmark_info.warmup_records }}` warmup
+
+## Ranking
+
+| Rank | Model | Provider | Avg Total Score | Success Rate | Validation Pass Rate | Avg Duration (ms) |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+{% for item in report.rankings %}
+| {{ item.rank }} | {{ item.model_label }} | {{ item.provider }} | {{ "%.2f"|format(item.avg_total_score) }} | {{ "%.2f"|format(item.success_rate * 100) }}% | {{ "%.2f"|format(item.validation_pass_rate * 100) }}% | {{ "%.2f"|format(item.avg_duration_ms) }} |
+{% endfor %}
+
+## Model Summaries
+
+{% for model in report.models %}
+### {{ model.model_label }}
+
+- Provider: `{{ model.provider }}`
+- Endpoint: `{{ model.base_url }}`
+- Model Name: `{{ model.model_name }}`
+- Streaming: `{{ model.supports_streaming }}`
+- Tools: `{{ model.supports_tools }}`
+- Structured Output: `{{ model.supports_structured_output }}`
+{% if model.summary %}
+- Avg Total Score: `{{ model.summary.avg_total_score }}`
+- Success Rate: `{{ (model.summary.success_rate * 100)|round(2) }}%`
+- Validation Pass Rate: `{{ (model.summary.validation_pass_rate * 100)|round(2) }}%`
+{% endif %}
+
+{% endfor %}
+## Strengths
+
+{% for item in report.strengths %}
+- {{ item.summary }}
+{% endfor %}
+
+## Weaknesses
+
+{% for item in report.weaknesses %}
+- {{ item.summary }}
+{% endfor %}
+
+## Anomalies
+
+{% if report.anomalies %}
+{% for item in report.anomalies %}
+- {{ item.summary }}
+{% endfor %}
+{% else %}
+- No major anomalies detected in the measured runs.
+{% endif %}
+
+## Recommendations
+
+{% for item in report.recommendations %}
+- [{{ item.priority|upper }}] {{ item.summary }}
+{% endfor %}
+
+## Fairness Notes
+
+{% for note in report.fairness_notes %}
+- {{ note }}
+{% endfor %}
+
+## Failed Runs
+
+{% if report.failed_runs %}
+| Model | Test Case | Phase | Success | Validation | Error Type | Error Message |
+| --- | --- | --- | --- | --- | --- | --- |
+{% for item in report.failed_runs %}
+| {{ item.model_label }} | {{ item.test_case_id }} | {{ item.phase }} | {{ item.success }} | {{ item.validation_passed }} | {{ item.error_type or "-" }} | {{ item.error_message or "-" }} |
+{% endfor %}
+{% else %}
+- No failed measured runs.
+{% endif %}

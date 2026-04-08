@@ -1,0 +1,25 @@
+# Purpose: Suite manifest for Paperless-KIplus benchmark scenarios.
+# Input/Output: Documents the schema-heavy document classification and tax enrichment benchmark scope.
+# Invariants: All listed test ids carry the `paperless_kiplus` suite tag in their test definitions.
+# Debugging: If the suite output looks incomplete, compare this manifest with the suite-tagged YAML files.
+
+suite_name: "paperless_kiplus"
+title: "Paperless-KIplus Suite"
+description: "Benchmark suite for document classification, strict JSON/YAML compliance, precheck decisions and tax enrichment."
+recommended_command: "benchmark run --config /config/config.unraid.example.yaml --suite paperless_kiplus --tests-dir /app/tests --results-dir /app/results"
+included_test_case_ids:
+  - "pk-document-classification"
+  - "pk-strict-json-schema"
+  - "pk-yaml-generation"
+  - "pk-precheck-decision"
+  - "pk-ai-note"
+  - "pk-robust-defaults"
+  - "pk-tax-enrichment"
+  - "pk-review-flags"
+  - "pk-tagging-recommendations"
+focus_areas:
+  - "Dokumentklassifikation"
+  - "JSON-/Schema-Treue"
+  - "YAML-Generierung"
+  - "Precheck / Duplicate / Quarantine"
+  - "Tax Enrichment und Review-Flags"

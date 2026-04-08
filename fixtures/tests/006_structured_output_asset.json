@@ -1,0 +1,37 @@
+{
+  "test_case_id": "structured-asset-risk",
+  "category": "extraction_json",
+  "title": "Structured JSON asset risk summary",
+  "description": "API replacement style test that expects a stable JSON object for downstream integrations.",
+  "prompt": "Return only JSON with the keys action, owner, sla_hours and blocking_issues. Incident: The backup job for finance-db has failed for three consecutive nights. The platform team owns remediation. SLA is 8 hours. Current blocker: missing IAM permission on the snapshot bucket.",
+  "expected_format": "json",
+  "response_format": {
+    "type": "json_object"
+  },
+  "validation_rules": {
+    "json_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "owner", "sla_hours", "blocking_issues"],
+      "properties": {
+        "action": { "type": "string" },
+        "owner": { "type": "string" },
+        "sla_hours": { "type": "integer" },
+        "blocking_issues": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "required_fields": ["action", "owner", "sla_hours", "blocking_issues"],
+    "expected_json_values": {
+      "owner": "platform team",
+      "sla_hours": 8
+    },
+    "reference_keywords": ["snapshot bucket", "IAM"]
+  },
+  "tags": ["api_replacement", "json", "ops"],
+  "suites": ["api_replacement"],
+  "max_output_tokens": 180,
+  "repetitions_default": 2
+}

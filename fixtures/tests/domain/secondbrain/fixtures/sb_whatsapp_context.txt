@@ -1,0 +1,31 @@
+Return strict JSON with:
+- appointments
+- commitments
+- open_questions
+- people
+
+WhatsApp export snippet:
+[
+  {
+    "message_id": "WA-1001",
+    "sender": "Anna",
+    "sent_at": "2026-05-10T18:12:00+02:00",
+    "text": "Koennen wir den Notartermin auf Freitag, den 15.05. um 14 Uhr legen?"
+  },
+  {
+    "message_id": "WA-1002",
+    "sender": "Lena",
+    "sent_at": "2026-05-10T18:14:00+02:00",
+    "text": "Ja, ich bringe die unterschriebenen Unterlagen mit."
+  },
+  {
+    "message_id": "WA-1003",
+    "sender": "Anna",
+    "sent_at": "2026-05-10T18:18:00+02:00",
+    "text": "Super. Klaerst du bitte noch, ob der Grundbuchauszug schon vorliegt?"
+  }
+]
+
+Rules:
+- Extract only what is explicit.
+- Preserve the people names as written.

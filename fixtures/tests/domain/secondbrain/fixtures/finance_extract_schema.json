@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "extracted_values", "missing_information"],
+  "properties": {
+    "summary": { "type": "string" },
+    "extracted_values": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "value", "source_id", "certainty"],
+        "properties": {
+          "label": { "type": "string" },
+          "value": { "type": "string" },
+          "source_id": { "type": "string" },
+          "certainty": { "type": "string" }
+        }
+      }
+    },
+    "missing_information": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

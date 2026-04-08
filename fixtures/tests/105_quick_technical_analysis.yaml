@@ -1,0 +1,36 @@
+# Purpose: Compact technical-analysis benchmark that checks whether the model spots a concrete bug quickly.
+# Input/Output: Expects JSON with a decision and a focused fix summary.
+# Invariants: The answer should identify the missing timeout handling rather than broad refactoring advice.
+# Debugging: If quality is weak, inspect whether the model mentions timeout or retry behavior at all.
+
+test_case_id: "quick-technical-analysis"
+category: "coding"
+title: "Quick technical analysis"
+description: "Short engineering analysis task for first-pass capability comparison."
+prompt: |
+  Return only JSON with keys issue and fix.
+
+  Code review note:
+  The HTTP client calls an external API without any timeout.
+  During upstream slowdowns, workers block until the process pool is exhausted.
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["issue", "fix"]
+    properties:
+      issue:
+        type: "string"
+      fix:
+        type: "string"
+  required_fields: ["issue", "fix"]
+  reference_keywords:
+    - "timeout"
+    - "blocking"
+tags: ["quick_compare", "coding", "analysis"]
+suites: ["quick_compare"]
+max_output_tokens: 120
+repetitions_default: 2

@@ -1,0 +1,34 @@
+Return strict JSON with:
+- summary
+- extracted_values
+- missing_information
+
+Finance bundle:
+[
+  {
+    "source_id": "SB-SAL-2026-03",
+    "type": "salary_statement",
+    "month": "2026-03",
+    "gross_salary": "4.850,00 EUR",
+    "net_salary": "3.062,18 EUR",
+    "tax_class": "I"
+  },
+  {
+    "source_id": "SB-BANK-2026-04-02",
+    "type": "bank_transaction",
+    "booking_text": "Miete April 2026",
+    "amount": "-1.240,00 EUR",
+    "booking_date": "2026-04-02"
+  },
+  {
+    "source_id": "SB-DEPOT-2026-04-15",
+    "type": "depot_report",
+    "portfolio_value": "28.410,55 EUR",
+    "note": "Keine Angabe zum Tagesgewinn."
+  }
+]
+
+Rules:
+- Extract only values that are explicitly present.
+- Mark uncertainty conservatively.
+- Do not invent tax advice.

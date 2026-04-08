@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["max_parallel_documents", "request_timeout_seconds", "dry_run_default", "duplicate_policy", "quarantine_on_error"],
+  "properties": {
+    "max_parallel_documents": { "type": "integer", "minimum": 1, "maximum": 8 },
+    "request_timeout_seconds": { "type": "integer", "minimum": 30, "maximum": 600 },
+    "dry_run_default": { "type": "boolean" },
+    "duplicate_policy": { "type": "string" },
+    "quarantine_on_error": { "type": "boolean" }
+  }
+}

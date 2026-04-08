@@ -1,0 +1,28 @@
+# Purpose: Structured query benchmark for contract and timeline style SecondBrain answers.
+# Input/Output: Expects strict JSON with normalized items, answer text, citations and confidence.
+# Invariants: Only contracts inside the requested 30-day window should appear.
+# Debugging: If wrong items leak in, inspect `items` and the cited source ids in raw output.
+
+test_case_id: "sb-structured-query"
+category: "extraction_json"
+title: "SecondBrain structured contract query"
+description: "Measures whether a model can transform a practical SecondBrain query into deterministic JSON suitable for an API response."
+prompt_file: "fixtures/sb_structured_query.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/structured_query_schema.json"
+  required_fields: ["query_type", "items", "answer", "cited_items", "confidence"]
+  required_json_paths: ["items.0.item_id"]
+  expected_json_values:
+    query_type: "expiring_contracts"
+  reference_keywords:
+    - "contract-EW-2026"
+    - "contract-gym-2026"
+  contains_none:
+    - "contract-ins-2026"
+tags: ["secondbrain", "json", "query"]
+suites: ["secondbrain"]
+max_output_tokens: 260
+repetitions_default: 2

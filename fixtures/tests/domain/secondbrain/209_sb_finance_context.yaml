@@ -1,0 +1,27 @@
+# Purpose: Finance extraction benchmark for salary, banking and depot context inside SecondBrain.
+# Input/Output: Expects strict JSON with a summary, extracted values and missing-information markers.
+# Invariants: Values must stay conservative and uncertainty must be surfaced instead of guessed away.
+# Debugging: If models invent tax advice or missing figures, inspect extracted_values and missing_information.
+
+test_case_id: "sb-finance-context"
+category: "extraction_json"
+title: "SecondBrain finance and salary context extraction"
+description: "Checks conservative financial extraction from mixed salary, banking and depot context without invented numbers."
+prompt_file: "fixtures/sb_finance_context.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/finance_extract_schema.json"
+  required_fields: ["summary", "extracted_values", "missing_information"]
+  required_json_paths: ["extracted_values.0.label"]
+  reference_keywords:
+    - "3.062,18 EUR"
+    - "28.410,55 EUR"
+    - "Keine Angabe zum Tagesgewinn"
+  contains_none:
+    - "Steuerempfehlung"
+tags: ["secondbrain", "finance", "salary", "banking", "json"]
+suites: ["secondbrain"]
+max_output_tokens: 260
+repetitions_default: 2

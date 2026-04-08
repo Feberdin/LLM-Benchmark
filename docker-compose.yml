@@ -1,0 +1,36 @@
+# Purpose: Local and Unraid-like compose setup for the integrated benchmark-and-dashboard container.
+# Input/Output: Mounts config, tests and result directories into the container and exposes the optional dashboard port.
+# Invariants: The compose stack stays single-container because model backends are external dependencies.
+# Debugging: Use `docker compose run --rm llm-benchmark doctor --config /config/config.example.yaml` first.
+
+services:
+  llm-benchmark:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: feberdin/llm-benchmark:latest
+    container_name: llm-benchmark
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      BENCHMARK_CONFIG: ${BENCHMARK_CONFIG:-/config/config.example.yaml}
+      BENCHMARK_AUTO_RUN: ${BENCHMARK_AUTO_RUN:-true}
+      BENCHMARK_ACTION: ${BENCHMARK_ACTION:-dashboard}
+      BENCHMARK_SUITE: ${BENCHMARK_SUITE:-quick_compare}
+      BENCHMARK_TESTS_DIR: ${BENCHMARK_TESTS_DIR:-/app/tests}
+      BENCHMARK_RESULTS_DIR: ${BENCHMARK_RESULTS_DIR:-/app/results}
+      DASHBOARD_HOST: ${DASHBOARD_HOST:-0.0.0.0}
+      DASHBOARD_PORT: ${DASHBOARD_PORT:-8080}
+      RESULTS_DIR: ${RESULTS_DIR:-/app/results}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
+      DEFAULT_TIMEOUT_SECONDS: ${DEFAULT_TIMEOUT_SECONDS:-120}
+    ports:
+      - "${DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - ./fixtures/config:/config
+      - ./fixtures/tests:/app/tests
+      - ./results:/app/results

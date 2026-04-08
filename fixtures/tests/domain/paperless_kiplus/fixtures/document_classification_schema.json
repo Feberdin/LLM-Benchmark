@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["document_type", "correspondent", "storage_path", "tags", "document_date", "ai_note"],
+  "properties": {
+    "document_type": { "type": "string" },
+    "correspondent": { "type": "string" },
+    "storage_path": { "type": "string" },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "document_date": { "type": "string" },
+    "ai_note": { "type": "string" }
+  }
+}

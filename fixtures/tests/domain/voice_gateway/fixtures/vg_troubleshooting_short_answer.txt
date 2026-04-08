@@ -1,0 +1,13 @@
+Answer in plain text for Alexa.
+
+Constraints:
+- Max 220 characters.
+- One compact troubleshooting recommendation.
+- No markdown.
+
+Troubleshooting snippet:
+Wenn der Skill bei OAuth Device Login haengt, pruefe zuerst den gueltigen Refresh Token,
+danach die lokale Uhrzeit und schliesslich die Weiterleitung zur Callback-URL.
+
+Question:
+Was soll ich zuerst pruefen, wenn der Login haengt?

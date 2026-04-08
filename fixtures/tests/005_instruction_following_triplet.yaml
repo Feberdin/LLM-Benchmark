@@ -1,0 +1,41 @@
+# Purpose: Instruction-following benchmark with a strict three-line output contract.
+# Input/Output: Expects exactly three lines with fixed prefixes and no markdown.
+# Invariants: This test rewards format discipline, not verbosity.
+# Debugging: If outputs contain extra prose, inspect regex rules and max length validation.
+
+test_case_id: "follow-three-line-format"
+category: "instruction_following"
+title: "Follow a strict three-line response format"
+description: "Checks whether a model can obey a compact format without adding preambles or markdown."
+prompt: |
+  Analyze the statement `The deployment failed because the database schema migration was skipped.`
+  Reply in exactly 3 lines and use these prefixes:
+  priority:
+  confidence:
+  summary:
+  Do not use markdown, bullets, or code fences.
+expected_format: "text"
+validation_rules:
+  contains_all:
+    - "priority:"
+    - "confidence:"
+    - "summary:"
+  contains_none:
+    - "```"
+    - "*"
+  regex_must_match:
+    - "(?m)^priority:\\s*(low|medium|high)$"
+    - "(?m)^confidence:\\s*0\\.[0-9]{2}$"
+    - "(?m)^summary:\\s+.+$"
+  max_length_chars: 150
+scoring_weights:
+  quality: 0.25
+  format: 0.20
+  latency: 0.15
+  stability: 0.10
+  reproducibility: 0.10
+  instruction: 0.20
+tags: ["core", "instruction", "format"]
+suites: ["core", "api_replacement"]
+max_output_tokens: 120
+repetitions_default: 2

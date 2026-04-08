@@ -1,0 +1,26 @@
+Return strict JSON with one top-level key `facts`.
+Extract conservative facts from the synthetic SecondBrain document.
+
+Required fact types to include when supported:
+- contract_partner
+- cancellation_deadline
+- monthly_amount
+- customer_number
+- document_type
+- case_reference
+
+Document:
+Aboflex Energie GmbH
+Kundenservice Vertragsverwaltung
+
+Kundennummer: K-884129
+Fallreferenz: E-2026-118
+Dokumenttyp: Abschlagsanpassung
+
+Sehr geehrte Frau Berger,
+ab dem 01.06.2026 betraegt Ihr monatlicher Abschlag 129,40 EUR.
+Wenn Sie den Vertrag zum naechsten Termin beenden moechten, muss uns Ihre Kuendigung
+bis spaetestens 31.05.2026 vorliegen.
+
+Mit freundlichen Gruessen
+Aboflex Energie GmbH

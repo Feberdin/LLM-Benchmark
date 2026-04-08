@@ -1,0 +1,36 @@
+You are formatting a SecondBrain query answer.
+Return strict JSON with:
+- answer
+- cited_items
+- confidence
+- unsupported_claims
+
+Question:
+Welche Unterlagen sprechen fuer einen geplanten Depotuebertrag und wie sicher ist diese Aussage?
+
+Context:
+[
+  {
+    "source_id": "SB-MAIL-2026-0416",
+    "type": "mail",
+    "subject": "Unterlagen fuer Depotuebertrag",
+    "body": "Bitte senden Sie die unterschriebene Uebertragsvollmacht bis zum 29.04.2026 zurueck. Ohne Vollmacht kann der Depotuebertrag nicht gestartet werden."
+  },
+  {
+    "source_id": "SB-DOC-2026-0308",
+    "type": "document",
+    "title": "Uebertragsvollmacht Entwurf",
+    "summary": "Vorbereiteter, aber noch nicht unterschriebener Formularsatz fuer den Depotuebertrag."
+  },
+  {
+    "source_id": "SB-NOTE-2026-014",
+    "type": "fact",
+    "label": "Depot bei Bergkapital soll konsolidiert werden",
+    "status": "candidate_plan"
+  }
+]
+
+Rules:
+- Cite at least two source ids.
+- Confidence must be between 0 and 1.
+- Do not mention any source that is not present.

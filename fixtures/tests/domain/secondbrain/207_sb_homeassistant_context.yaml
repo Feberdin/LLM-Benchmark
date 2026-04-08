@@ -1,0 +1,25 @@
+# Purpose: Home Assistant context benchmark for short, evidence-based status answers within the SecondBrain domain.
+# Input/Output: Expects strict JSON with answer text, cited entities, confidence and unsupported claims.
+# Invariants: The answer must stay limited to the provided HA snapshot and cite the used entities.
+# Debugging: Check cited_items first when the answer mentions states that are not in the snapshot.
+
+test_case_id: "sb-homeassistant-context"
+category: "chat"
+title: "SecondBrain Home Assistant context answer"
+description: "Measures how well a model answers a compact smart-home status question from structured entity context."
+prompt_file: "fixtures/sb_homeassistant_context.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/homeassistant_answer_schema.json"
+  required_fields: ["answer", "cited_items", "confidence", "unsupported_claims"]
+  required_json_paths: ["cited_items.0"]
+  reference_keywords:
+    - "sensor.house_battery_soc"
+    - "sensor.solar_power"
+    - "sensor.wallbox_status"
+tags: ["secondbrain", "home_assistant", "context"]
+suites: ["secondbrain"]
+max_output_tokens: 220
+repetitions_default: 2

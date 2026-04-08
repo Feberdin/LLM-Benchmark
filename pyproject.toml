@@ -1,0 +1,54 @@
+# Purpose: Python packaging, dependency management, test configuration and console entrypoints.
+# Input/Output: Consumed by pip/build tools; produces an installable `llm-benchmark` package.
+# Invariants: Python 3.12+, source layout under `src/`, package data for report templates is included.
+# Debugging: If installation or tests fail, start with `pip install -e .[dev]` and `pytest -q`.
+
+[build-system]
+requires = ["setuptools>=69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-benchmark"
+version = "0.1.0"
+description = "Production-oriented Docker and Unraid friendly benchmark orchestrator for OpenAI-compatible LLM endpoints."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Feberdin" }]
+dependencies = [
+  "httpx>=0.27,<0.29",
+  "pydantic>=2.7,<3.0",
+  "PyYAML>=6.0,<7.0",
+  "jsonschema>=4.22,<5.0",
+  "orjson>=3.10,<4.0",
+  "typer>=0.12,<1.0",
+  "jinja2>=3.1,<4.0",
+  "fastapi>=0.115,<1.0",
+  "uvicorn>=0.30,<1.0",
+  "pandas>=2.2,<3.0",
+  "tenacity>=8.3,<10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2,<9.0",
+  "pytest-asyncio>=0.23,<1.0",
+]
+
+[project.scripts]
+benchmark = "llm_benchmark.cli:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+llm_benchmark = ["templates/*.j2", "reporting/*.json", "dashboard/templates/*.html", "dashboard/static/*"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"

@@ -1,0 +1,34 @@
+# Purpose: SecondBrain RAG benchmark for evidence-bound answers over mixed document, mail and fact context.
+# Input/Output: Expects strict JSON with an answer, citations and an explicit unsupported-claims field.
+# Invariants: The model must stay inside the provided context bundle and keep unsupported_claims empty when grounded.
+# Debugging: Inspect cited source ids and unsupported_claims when a model hallucinates timeline details.
+
+test_case_id: "sb-rag-context-fidelity"
+category: "long_context"
+title: "SecondBrain context fidelity across mixed sources"
+description: "Checks whether a model can answer a personal knowledge query only from supplied document, mail, calendar and fact context."
+prompt_file: "fixtures/sb_rag_context_fidelity.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/source_answer_schema.json"
+  required_fields: ["answer", "cited_items", "confidence", "unsupported_claims"]
+  required_json_paths: ["cited_items.0"]
+  reference_keywords:
+    - "SB-DOC-2026-0412"
+    - "29.04.2026"
+    - "03.05.2026"
+  contains_none:
+    - "AOK Bayern"
+tags: ["secondbrain", "rag", "citations", "knowledge"]
+suites: ["secondbrain"]
+max_output_tokens: 260
+repetitions_default: 2
+scoring_weights:
+  quality: 0.35
+  format: 0.25
+  latency: 0.10
+  stability: 0.10
+  instruction: 0.10
+  reproducibility: 0.10

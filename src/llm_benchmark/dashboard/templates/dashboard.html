@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="/static/dashboard.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Feberdin Benchmark Control</p>
+          <h1>{{ page_title }}</h1>
+          <p class="hero-copy">
+            Letzter Lauf: {{ overview.benchmark_name or "noch kein Benchmark" }}
+            {% if overview.suite %}<span class="hero-badge">{{ overview.suite }}</span>{% endif %}
+          </p>
+        </div>
+        <div class="hero-meta">
+          <div class="meta-card">
+            <span>Run</span>
+            <strong>{{ overview.run_finished_at or "n/a" }}</strong>
+          </div>
+          <div class="meta-card">
+            <span>Records</span>
+            <strong>{{ overview.measured_records or 0 }}</strong>
+          </div>
+          <div class="meta-card">
+            <span>Stand</span>
+            <strong>{{ overview.generated_at or generated_at }}</strong>
+          </div>
+        </div>
+      </header>
+
+      <nav class="top-nav">
+        {% for value, label in view_options %}
+          <a class="nav-pill {% if filters.view == value %}active{% endif %}" href="/dashboard?view={{ value }}">{{ label }}</a>
+        {% endfor %}
+      </nav>
+
+      <section class="filters-panel">
+        <form method="get" action="/dashboard" class="filters-grid">
+          <input type="hidden" name="view" value="{{ filters.view }}" />
+          <label>
+            <span>Suite</span>
+            <select name="suite">
+              <option value="all">Alle</option>
+              {% for suite in filter_options.suites %}
+                <option value="{{ suite }}" {% if filters.suite == suite %}selected{% endif %}>{{ suite }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Modell</span>
+            <select name="model">
+              <option value="all">Alle</option>
+              {% for model in filter_options.models %}
+                <option value="{{ model }}" {% if filters.model == model %}selected{% endif %}>{{ model }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Kategorie</span>
+            <select name="category">
+              <option value="all">Alle</option>
+              {% for category in filter_options.categories %}
+                <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>{{ category }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Status</span>
+            <select name="status">
+              {% for value, label in [("all", "Alle"), ("success", "Erfolgreich"), ("failed", "Fehlerhaft"), ("validation_failed", "Validation fehlgeschlagen")] %}
+                <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Fehlertyp</span>
+            <select name="error_type">
+              <option value="all">Alle</option>
+              {% for error_type in filter_options.error_types %}
+                <option value="{{ error_type }}" {% if filters.error_type == error_type %}selected{% endif %}>{{ error_type }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="search-field">
+            <span>Suche</span>
+            <input type="search" name="search" value="{{ filters.search or '' }}" placeholder="Test, Modell, Fehler..." />
+          </label>
+          <button type="submit" class="primary-button">Filter anwenden</button>
+        </form>
+      </section>
+
+      {% if not overview.has_results %}
+        <section class="empty-state">
+          <h2>Noch keine Ergebnisse</h2>
+          <p>Fuehre zuerst einen Benchmark-Lauf aus oder lege vorhandene Report-Dateien unter <code>/app/results</code> ab.</p>
+        </section>
+      {% else %}
+        {% if filters.view == "overview" %}
+          <section class="metric-grid">
+            <article class="metric-card accent-pink">
+              <span>Gesamt-Ranking</span>
+              <strong>{{ overview.overall_ranking[0].model_label if overview.overall_ranking else "n/a" }}</strong>
+              <small>{{ overview.overall_ranking[0].avg_total_score if overview.overall_ranking else "-" }}</small>
+            </article>
+            <article class="metric-card accent-cyan">
+              <span>Schnellstes Modell</span>
+              <strong>{{ overview.fastest_model.model_label if overview.fastest_model else "n/a" }}</strong>
+              <small>{{ overview.fastest_model.avg_duration_ms if overview.fastest_model else "-" }} ms</small>
+            </article>
+            <article class="metric-card accent-orange">
+              <span>Bestes Qualitaetsmodell</span>
+              <strong>{{ overview.best_quality_model.model_label if overview.best_quality_model else "n/a" }}</strong>
+              <small>{{ overview.best_quality_model.avg_quality_score if overview.best_quality_model else "-" }}</small>
+            </article>
+            <article class="metric-card accent-purple">
+              <span>Bester OpenAI-Ersatz</span>
+              <strong>{{ overview.best_openai_replacement.model_label if overview.best_openai_replacement else "n/a" }}</strong>
+              <small>{{ overview.best_openai_replacement.avg_total_score if overview.best_openai_replacement else "-" }}</small>
+            </article>
+          </section>
+
+          <section class="panel two-column">
+            <div class="panel-card">
+              <h2>Gesamt-Ranking</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Modell</th>
+                    <th>Score</th>
+                    <th>Validierung</th>
+                    <th>Latenz</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in overview.overall_ranking %}
+                    <tr>
+                      <td>{{ row.rank }}</td>
+                      <td>{{ row.model_label }}</td>
+                      <td>{{ row.avg_total_score }}</td>
+                      <td>{{ row.validation_pass_rate }}</td>
+                      <td>{{ row.avg_duration_ms }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <div class="panel-card">
+              <h2>Auffaelligkeiten</h2>
+              <ul class="signal-list">
+                {% for anomaly in overview.anomalies %}
+                  <li>
+                    <span class="status-badge warning">{{ anomaly.type }}</span>
+                    <p>{{ anomaly.summary }}</p>
+                  </li>
+                {% else %}
+                  <li><p>Keine auffaelligen Anomalien im letzten Lauf.</p></li>
+                {% endfor %}
+              </ul>
+            </div>
+          </section>
+
+          <section class="panel two-column">
+            <div class="panel-card">
+              <h2>Projekt-Empfehlungen</h2>
+              <div class="card-grid">
+                {% for card in overview.repo_cards %}
+                  <article class="mini-card">
+                    <span>{{ card.title }}</span>
+                    <strong>{{ card.payload.model_label if card.payload else "n/a" }}</strong>
+                    <small>{{ card.payload.avg_total_score if card.payload else "-" }}</small>
+                  </article>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="panel-card">
+              <h2>Direktzugriff</h2>
+              <div class="download-grid">
+                {% for item in downloads %}
+                  <a href="{{ item.path }}" class="download-card">
+                    <strong>{{ item.name }}</strong>
+                    <small>{{ item.size_kb }} KB</small>
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+          </section>
+        {% elif filters.view == "models" %}
+          <section class="card-grid">
+            {% for model in models %}
+              <article class="model-card">
+                <header>
+                  <span class="status-badge neutral">{{ model.provider }}</span>
+                  <h2>{{ model.model_label }}</h2>
+                  <p>{{ model.model_name }}</p>
+                </header>
+                <div class="score-grid">
+                  <div><span>Total</span><strong>{{ model.avg_total_score }}</strong></div>
+                  <div><span>Quality</span><strong>{{ model.avg_quality_score }}</strong></div>
+                  <div><span>Format</span><strong>{{ model.avg_format_score }}</strong></div>
+                  <div><span>Latency</span><strong>{{ model.avg_latency_score }}</strong></div>
+                  <div><span>Stability</span><strong>{{ model.avg_stability_score }}</strong></div>
+                  <div><span>Instruction</span><strong>{{ model.avg_instruction_score }}</strong></div>
+                </div>
+                <div class="metric-row">
+                  <span>Durchschnitt</span><strong>{{ model.avg_duration_ms }} ms</strong>
+                  <span>Median</span><strong>{{ model.median_duration_ms }} ms</strong>
+                  <span>p95</span><strong>{{ model.p95_duration_ms }} ms</strong>
+                </div>
+                <div class="metric-row">
+                  <span>Erfolgsquote</span><strong>{{ model.success_rate }}%</strong>
+                  <span>JSON</span><strong>{{ model.json_validity_rate if model.json_validity_rate is not none else "n/a" }}{% if model.json_validity_rate is not none %}%{% endif %}</strong>
+                  <span>Tools</span><strong>{{ model.tool_call_validity_rate if model.tool_call_validity_rate is not none else "n/a" }}{% if model.tool_call_validity_rate is not none %}%{% endif %}</strong>
+                </div>
+                <p class="muted">Staerken: {{ model.strengths | join(", ") if model.strengths else "n/a" }}</p>
+                <p class="muted">Schwaechen: {{ model.weaknesses | join(", ") if model.weaknesses else "n/a" }}</p>
+              </article>
+            {% endfor %}
+          </section>
+        {% elif filters.view == "categories" %}
+          <section class="stack">
+            {% for section in categories %}
+              <article class="panel-card">
+                <h2>{{ section.category }}</h2>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Modell</th>
+                      <th>Score</th>
+                      <th>Validierung</th>
+                      <th>Success</th>
+                      <th>Avg ms</th>
+                      <th>Tests</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in section.models %}
+                      <tr>
+                        <td>{{ row.model_label }}</td>
+                        <td>{{ row.avg_total_score }}</td>
+                        <td>{{ row.validation_pass_rate }}%</td>
+                        <td>{{ row.success_rate }}%</td>
+                        <td>{{ row.avg_duration_ms }}</td>
+                        <td>{{ row.test_case_ids | join(", ") }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </article>
+            {% endfor %}
+          </section>
+        {% elif filters.view == "tests" %}
+          <section class="stack">
+            {% for row in tests %}
+              <article class="panel-card">
+                <div class="row-head">
+                  <div>
+                    <span class="status-badge {% if row.status == 'ok' %}success{% else %}danger{% endif %}">{{ row.status }}</span>
+                    <h2>{{ row.test_title }}</h2>
+                    <p class="muted">{{ row.test_case_id }} | {{ row.model_label }} | {{ row.category }} | {{ row.suite_names }}</p>
+                  </div>
+                  <div class="run-metrics">
+                    <span>Score <strong>{{ row.score_total }}</strong></span>
+                    <span>Dauer <strong>{{ row.duration_ms }} ms</strong></span>
+                  </div>
+                </div>
+                <p>{{ row.description }}</p>
+                <div class="details-grid">
+                  <div>
+                    <h3>Prompt</h3>
+                    <pre>{{ row.prompt_excerpt }}</pre>
+                  </div>
+                  <div>
+                    <h3>Antwort</h3>
+                    <pre>{{ row.response_excerpt or row.parsed_output_excerpt or "n/a" }}</pre>
+                  </div>
+                </div>
+                {% if row.error_message or row.validation_error_summary %}
+                  <p class="danger-text">{{ row.error_type or "validation" }}: {{ row.error_message or row.validation_error_summary }}</p>
+                {% endif %}
+              </article>
+            {% else %}
+              <article class="panel-card"><p>Keine Testlaeufe fuer die gewaehlten Filter gefunden.</p></article>
+            {% endfor %}
+          </section>
+        {% elif filters.view == "failures" %}
+          <section class="panel two-column">
+            <div class="panel-card">
+              <h2>Anomalien</h2>
+              <ul class="signal-list">
+                {% for anomaly in failures.anomalies %}
+                  <li>
+                    <span class="status-badge warning">{{ anomaly.type }}</span>
+                    <p>{{ anomaly.summary }}</p>
+                  </li>
+                {% else %}
+                  <li><p>Keine Anomalien erkannt.</p></li>
+                {% endfor %}
+              </ul>
+            </div>
+            <div class="panel-card">
+              <h2>Fehlerhafte Runs</h2>
+              <ul class="signal-list">
+                {% for row in failures.rows %}
+                  <li>
+                    <span class="status-badge danger">{{ row.error_type }}</span>
+                    <p><strong>{{ row.model_label }}</strong> / {{ row.test_case_id }}: {{ row.error_message }}</p>
+                  </li>
+                {% else %}
+                  <li><p>Keine Fehler fuer die aktuellen Filter gefunden.</p></li>
+                {% endfor %}
+              </ul>
+            </div>
+          </section>
+        {% elif filters.view == "domains" %}
+          <section class="card-grid">
+            {% for card in domains.recommendation_cards %}
+              <article class="model-card">
+                <span class="status-badge accent">{{ card.title }}</span>
+                <h2>{{ card.payload.model_label if card.payload else "n/a" }}</h2>
+                <p>{{ card.payload.avg_total_score if card.payload else "-" }}</p>
+              </article>
+            {% endfor %}
+          </section>
+
+          <section class="stack">
+            {% for suite_name, repo in domains.repo_recommendations.items() %}
+              <article class="panel-card">
+                <h2>{{ repo.project_label }}</h2>
+                <p>{{ repo.benchmark_fit_summary }}</p>
+                <p class="muted">Fokus: {{ repo.focus_areas | join(", ") }}</p>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Modell</th>
+                      <th>Score</th>
+                      <th>Validierung</th>
+                      <th>Success</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in repo.ranking %}
+                      <tr>
+                        <td>{{ row.rank }}</td>
+                        <td>{{ row.model_label }}</td>
+                        <td>{{ row.avg_total_score }}</td>
+                        <td>{{ row.validation_pass_rate }}</td>
+                        <td>{{ row.success_rate }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </article>
+            {% endfor %}
+          </section>
+
+          <section class="stack">
+            {% for focus in domains.focus_area_rankings %}
+              <article class="panel-card">
+                <h2>{{ focus.title }}</h2>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Modell</th>
+                      <th>Score</th>
+                      <th>Success</th>
+                      <th>Validierung</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in focus.ranking %}
+                      <tr>
+                        <td>{{ row.model_label }}</td>
+                        <td>{{ row.avg_total_score }}</td>
+                        <td>{{ row.success_rate }}%</td>
+                        <td>{{ row.validation_pass_rate }}%</td>
+                      </tr>
+                    {% else %}
+                      <tr><td colspan="4">Keine Daten</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </article>
+            {% endfor %}
+          </section>
+        {% elif filters.view == "downloads" %}
+          <section class="download-grid">
+            {% for item in downloads %}
+              <a href="{{ item.path }}" class="download-card">
+                <strong>{{ item.name }}</strong>
+                <span>{{ item.size_kb }} KB</span>
+              </a>
+            {% endfor %}
+          </section>
+        {% endif %}
+      {% endif %}
+    </div>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+# Purpose: Runtime defaults benchmark for conservative Paperless-KIplus production settings.
+# Input/Output: Expects strict JSON with a small set of operational defaults.
+# Invariants: The suggested defaults should favor safety and reliability over aggressive parallelism.
+# Debugging: Review exact numeric choices if the model drifts into high-throughput recommendations.
+
+test_case_id: "pk-robust-defaults"
+category: "classification"
+title: "Paperless-KIplus robust production defaults"
+description: "Measures whether the model proposes conservative, durable runtime defaults for a Home Assistant deployment."
+prompt_file: "fixtures/pk_robust_defaults.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/runtime_defaults_schema.json"
+  expected_json_values:
+    max_parallel_documents: 2
+    request_timeout_seconds: 180
+    dry_run_default: true
+    duplicate_policy: "metadata_only"
+    quarantine_on_error: true
+tags: ["paperless_kiplus", "defaults", "production"]
+suites: ["paperless_kiplus"]
+max_output_tokens: 160
+repetitions_default: 2

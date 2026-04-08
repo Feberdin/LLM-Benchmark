@@ -1,0 +1,25 @@
+# Purpose: Suite manifest for SecondBrain-specific benchmark scenarios.
+# Input/Output: Documents the test ids and focus areas for the SecondBrain project domain.
+# Invariants: All listed test ids carry the `secondbrain` suite tag in their actual test definitions.
+# Debugging: If a run misses a listed case, compare this manifest with `benchmark list-tests --suite secondbrain`.
+
+suite_name: "secondbrain"
+title: "SecondBrain Suite"
+description: "Benchmark suite for context-faithful RAG, source-backed answers, structured queries and secure document reasoning."
+recommended_command: "benchmark run --config /config/config.unraid.example.yaml --suite secondbrain --tests-dir /app/tests --results-dir /app/results"
+included_test_case_ids:
+  - "sb-rag-context-fidelity"
+  - "sb-source-oriented-answer"
+  - "sb-structured-query"
+  - "sb-document-summary"
+  - "sb-fact-extraction"
+  - "sb-prompt-injection-defense"
+  - "sb-homeassistant-context"
+  - "sb-whatsapp-context"
+  - "sb-finance-context"
+focus_areas:
+  - "RAG / Kontexttreue"
+  - "Quellenorientierte Antworten"
+  - "Strukturierte Query-Antworten"
+  - "Sicherheitsgehorsam"
+  - "Home Assistant / Kommunikation / Finance-Kontext"

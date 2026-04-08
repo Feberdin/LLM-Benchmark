@@ -1,0 +1,25 @@
+# Purpose: Backend selection benchmark for one-step routing plus safe action planning.
+# Input/Output: Expects strict JSON with exactly one backend choice and an optional safe_action.
+# Invariants: Allowlisted actions may be proposed, but only one backend plan is valid.
+# Debugging: Check safe_action first when the route is home_assistant but the plan is rejected.
+
+test_case_id: "vg-tool-backend-selection"
+category: "function_calling"
+title: "Voice gateway backend selection plan"
+description: "Tests whether the model can prepare one safe backend call plan for a voice request."
+prompt_file: "fixtures/vg_tool_backend_selection.txt"
+expected_format: "json"
+response_format:
+  type: "json_object"
+validation_rules:
+  json_schema_file: "fixtures/routing_plan_schema.json"
+  expected_json_values:
+    route: "home_assistant"
+    should_use_ai_fallback: false
+    safe_action: "stop_wallbox_charging"
+  reference_keywords:
+    - "allowlisted"
+tags: ["voice_gateway", "backend_selection", "safety"]
+suites: ["voice_gateway"]
+max_output_tokens: 220
+repetitions_default: 2
