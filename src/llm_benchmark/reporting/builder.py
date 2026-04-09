@@ -75,6 +75,9 @@ def build_report_artifacts(
     recommendations = _build_recommendations(summary_by_model, summary_by_category, rankings)
     suite_records = _build_suite_records(test_cases, results)
     model_records = _build_model_records(config, summary_by_model, results)
+    repo_recommendations = _build_repo_recommendations(
+        _enrich_runs_with_test_metadata(measured_runs, _build_test_metadata_lookup(test_cases, results))
+    )
 
     final_report = {
         "schema_version": "1.0",
@@ -106,6 +109,10 @@ def build_report_artifacts(
         "anomalies": anomalies,
         "failed_runs": failed_runs,
         "recommendations": recommendations,
+        "repo_recommendations": repo_recommendations,
+        "best_model_for_secondbrain": repo_recommendations["secondbrain"]["best_model"],
+        "best_model_for_voice_gateway": repo_recommendations["voice_gateway"]["best_model"],
+        "best_model_for_paperless_kiplus": repo_recommendations["paperless_kiplus"]["best_model"],
         "fairness_notes": [
             "All models receive the same prompt text, prompt hash and declared max token budget for a given test case.",
             "Cold and warm phases are tracked separately so cache effects are not hidden in the raw data.",

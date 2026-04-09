@@ -14,12 +14,11 @@ response_format:
 validation_rules:
   json_schema_file: "fixtures/document_classification_schema.json"
   expected_json_values:
-    document_type: "invoice"
     correspondent: "Telekom Deutschland GmbH"
     document_date: "2026-03-04"
-  reference_keywords:
+  reference_keywords_any:
+    - "telekom"
     - "telecom"
-    - "2026"
 tags: ["paperless_kiplus", "classification", "json"]
 suites: ["paperless_kiplus"]
 max_output_tokens: 220

@@ -13,3 +13,4 @@ Rules:
 - Recommend only a few useful tags.
 - Reject noisy or unjustified tags.
 - Year or case tags only when clearly supported.
+- Keep `reason` to one concise sentence with at most about 180 characters.

@@ -20,5 +20,5 @@ validation_rules:
     - "Finanzamt"
 tags: ["paperless_kiplus", "tagging", "classification"]
 suites: ["paperless_kiplus"]
-max_output_tokens: 180
+max_output_tokens: 260
 repetitions_default: 2

@@ -190,6 +190,49 @@ def test_validator_accepts_any_of_reference_keyword_group() -> None:
     assert outcome.metrics["quality_checks_passed"] == 1
 
 
+def test_validator_accepts_json_value_ranges_and_variants() -> None:
+    validator = ResponseValidator()
+    case = TestCaseDefinition.model_validate(
+        {
+            "test_case_id": "json-range-case",
+            "category": "classification",
+            "title": "JSON ranges and variants",
+            "description": "Allows conservative numeric ranges and one of several accepted enum values.",
+            "prompt": "Return JSON with conservative defaults.",
+            "expected_format": "json",
+            "validation_rules": {
+                "json_schema": {
+                    "type": "object",
+                    "required": ["max_parallel_documents", "request_timeout_seconds", "duplicate_policy"],
+                    "properties": {
+                        "max_parallel_documents": {"type": "integer"},
+                        "request_timeout_seconds": {"type": "integer"},
+                        "duplicate_policy": {"type": "string"},
+                    },
+                },
+                "numeric_json_ranges": {
+                    "max_parallel_documents": {"min": 1, "max": 2},
+                    "request_timeout_seconds": {"min": 60, "max": 300},
+                },
+                "accepted_json_values": {
+                    "duplicate_policy": ["metadata_only", "skip"],
+                },
+            },
+        }
+    )
+    response = UnifiedResponse(
+        http_status=200,
+        raw_payload={"choices": []},
+        raw_response_text='{"max_parallel_documents": 1, "request_timeout_seconds": 300, "duplicate_policy": "skip"}',
+    )
+
+    outcome = validator.validate(case, response)
+
+    assert outcome.passed is True
+    assert outcome.metrics["quality_checks_total"] == 3
+    assert outcome.metrics["quality_checks_passed"] == 3
+
+
 def test_qwen_model_without_reasoning_control_gets_hint() -> None:
     model = BenchmarkModelConfig.model_validate(
         {

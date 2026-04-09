@@ -37,6 +37,8 @@ class ValidationRules(BaseModel):
     required_fields: list[str] = Field(default_factory=list)
     required_json_paths: list[str] = Field(default_factory=list)
     expected_json_values: dict[str, Any] = Field(default_factory=dict)
+    accepted_json_values: dict[str, list[Any]] = Field(default_factory=dict)
+    numeric_json_ranges: dict[str, dict[str, float | int]] = Field(default_factory=dict)
     contains_all: list[str] = Field(default_factory=list)
     contains_none: list[str] = Field(default_factory=list)
     reference_keywords_any: list[str] = Field(default_factory=list)

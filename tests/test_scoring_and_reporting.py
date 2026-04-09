@@ -125,6 +125,8 @@ def test_report_builder_generates_expected_sections() -> None:
     assert artifacts.analysis_input["purpose"] == "secondary_llm_analysis_input"
     assert artifacts.analysis_input["benchmark_metadata"]["suite"] == "core"
     assert artifacts.final_report["test_suites"][0]["suite_name"] == "core"
+    assert "repo_recommendations" in artifacts.final_report
+    assert "best_model_for_paperless_kiplus" in artifacts.final_report
     assert "repo_recommendations" in artifacts.analysis_input
     assert "best_model_for_secondbrain" in artifacts.analysis_input
     assert "structured_output_summary" in artifacts.analysis_input

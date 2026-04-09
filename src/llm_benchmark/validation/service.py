@@ -177,6 +177,41 @@ class ResponseValidator:
                         )
                     )
 
+            for json_path, accepted_values in test_case.validation_rules.accepted_json_values.items():
+                metrics["quality_checks_total"] += 1
+                actual_value = self._resolve_path(parsed_json, json_path)
+                if actual_value in accepted_values:
+                    metrics["quality_checks_passed"] += 1
+                else:
+                    issues.append(
+                        ValidationIssue(
+                            code="unexpected_json_value",
+                            category="quality",
+                            message=f"JSON path '{json_path}' is not one of the accepted values.",
+                            details={"accepted": accepted_values, "actual": actual_value},
+                        )
+                    )
+
+            for json_path, range_rule in test_case.validation_rules.numeric_json_ranges.items():
+                metrics["quality_checks_total"] += 1
+                actual_value = self._resolve_path(parsed_json, json_path)
+                min_value = range_rule.get("min")
+                max_value = range_rule.get("max")
+                if isinstance(actual_value, (int, float)) and (
+                    (min_value is None or actual_value >= min_value)
+                    and (max_value is None or actual_value <= max_value)
+                ):
+                    metrics["quality_checks_passed"] += 1
+                else:
+                    issues.append(
+                        ValidationIssue(
+                            code="json_value_out_of_range",
+                            category="quality",
+                            message=f"JSON path '{json_path}' is outside the accepted numeric range.",
+                            details={"min": min_value, "max": max_value, "actual": actual_value},
+                        )
+                    )
+
         lowercase_text = text.lower()
 
         for expected_snippet in test_case.validation_rules.contains_all:

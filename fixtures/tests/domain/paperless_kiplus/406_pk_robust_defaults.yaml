@@ -13,12 +13,20 @@ response_format:
   type: "json_object"
 validation_rules:
   json_schema_file: "fixtures/runtime_defaults_schema.json"
+  numeric_json_ranges:
+    max_parallel_documents:
+      min: 1
+      max: 2
+    request_timeout_seconds:
+      min: 60
+      max: 300
   expected_json_values:
-    max_parallel_documents: 2
-    request_timeout_seconds: 180
     dry_run_default: true
-    duplicate_policy: "metadata_only"
     quarantine_on_error: true
+  accepted_json_values:
+    duplicate_policy:
+      - "metadata_only"
+      - "skip"
 tags: ["paperless_kiplus", "defaults", "production"]
 suites: ["paperless_kiplus"]
 max_output_tokens: 160

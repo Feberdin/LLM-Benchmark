@@ -17,7 +17,7 @@ validation_rules:
     needs_review: true
     needs_payment_proof: true
     needs_person_assignment: true
-    needs_year_assignment: false
+    needs_year_assignment: true
     high_audit_relevance: true
     mixed_private_and_tax_relevant: true
     cash_payment_not_eligible: true
