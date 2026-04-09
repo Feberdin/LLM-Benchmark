@@ -8,6 +8,7 @@ How to debug: Inspect `dashboard_run_state.json` and `dashboard_run_history.json
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from time import perf_counter
 import os
 from pathlib import Path
 from threading import RLock, Thread
@@ -15,6 +16,7 @@ from typing import Any
 import logging
 import uuid
 
+import httpx
 import orjson
 
 from llm_benchmark.config.loader import filter_test_cases_by_suite, load_config, load_test_cases
@@ -69,6 +71,43 @@ class RunState:
     events: list[TimelineEvent] = field(default_factory=list)
 
 
+@dataclass(slots=True)
+class ConnectivityResult:
+    """One lightweight reachability probe result for a configured model endpoint."""
+
+    model_id: str
+    model_label: str
+    provider: str
+    endpoint: str
+    model_name: str
+    ok: bool
+    status: str
+    message: str
+    http_status: int | None = None
+    duration_ms: float | None = None
+    model_listed: bool | None = None
+    listed_models_preview: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class ConnectivityState:
+    """Current status and latest results of the dashboard-triggered connectivity check."""
+
+    check_id: str | None = None
+    status: str = "idle"
+    started_at: str | None = None
+    finished_at: str | None = None
+    current_model_label: str | None = None
+    total_models: int = 0
+    checked_models: int = 0
+    reachable_models: int = 0
+    failed_models: int = 0
+    summary: str | None = None
+    latest_error: str | None = None
+    results: list[ConnectivityResult] = field(default_factory=list)
+    events: list[TimelineEvent] = field(default_factory=list)
+
+
 class DashboardRunManager:
     """
     Coordinate benchmark runs triggered from the web dashboard.
@@ -84,11 +123,14 @@ class DashboardRunManager:
         self.results_dir = ensure_directory(results_dir)
         self.state_path = self.results_dir / "dashboard_run_state.json"
         self.history_path = self.results_dir / "dashboard_run_history.json"
+        self.connectivity_state_path = self.results_dir / "dashboard_connectivity_state.json"
         self._lock = RLock()
         self._active_thread: Thread | None = None
+        self._connectivity_thread: Thread | None = None
         self._preflight_cache: dict[str, dict[str, Any]] = {}
         self._state = self._load_state()
         self._history = self._load_history()
+        self._connectivity_state = self._load_connectivity_state()
         if self._state.status in {"queued", "running"}:
             self._state.status = "interrupted"
             self._state.current_stage = "interrupted"
@@ -116,11 +158,16 @@ class DashboardRunManager:
             "state": state,
             "preflight": preflight,
             "history": history,
+            "connectivity": asdict(self._connectivity_state),
         }
 
     def history_payload(self) -> list[dict[str, Any]]:
         with self._lock:
             return list(self._history[:20])
+
+    def connectivity_payload(self) -> dict[str, Any]:
+        with self._lock:
+            return asdict(self._connectivity_state)
 
     def start_run(self, *, suite: str | None) -> dict[str, Any]:
         """Start a background benchmark run or raise an actionable operator error."""
@@ -173,6 +220,48 @@ class DashboardRunManager:
             )
             self._active_thread.start()
             return asdict(self._state)
+
+    def start_connectivity_check(self) -> dict[str, Any]:
+        """Run a lightweight reachability check for all enabled model endpoints."""
+
+        benchmark_config = load_config(self.config_path)
+        enabled_models = benchmark_config.enabled_models()
+        if not enabled_models:
+            raise ValueError("Keine aktiven Modelle in der Konfiguration gefunden.")
+
+        with self._lock:
+            if self._active_thread and self._active_thread.is_alive():
+                raise RuntimeError("Bitte warte mit dem Erreichbarkeits-Check, bis der laufende Benchmark beendet ist.")
+            if self._connectivity_thread and self._connectivity_thread.is_alive():
+                raise RuntimeError("Es laeuft bereits ein Erreichbarkeits-Check.")
+
+            check_id = str(uuid.uuid4())
+            self._connectivity_state = ConnectivityState(
+                check_id=check_id,
+                status="queued",
+                started_at=isoformat_utc(),
+                total_models=len(enabled_models),
+                summary="Erreichbarkeits-Check wurde eingeplant.",
+                events=[
+                    TimelineEvent(
+                        timestamp=isoformat_utc(),
+                        event="connectivity_check_queued",
+                        stage="queued",
+                        level="info",
+                        summary="LLM-Erreichbarkeits-Check wurde gestartet.",
+                        details={"model_count": len(enabled_models)},
+                    )
+                ],
+            )
+            self._persist_locked()
+            self._connectivity_thread = Thread(
+                target=self._run_connectivity_check,
+                kwargs={"check_id": check_id},
+                daemon=True,
+                name=f"dashboard-connectivity-{check_id[:8]}",
+            )
+            self._connectivity_thread.start()
+            return asdict(self._connectivity_state)
 
     def preflight(self, *, suite: str | None) -> dict[str, Any]:
         """Validate config, tests and required secrets before a dashboard-triggered run starts."""
@@ -316,6 +405,100 @@ class DashboardRunManager:
                 self._push_history_locked()
                 self._persist_locked()
 
+    def _run_connectivity_check(self, *, check_id: str) -> None:
+        try:
+            benchmark_config = load_config(self.config_path)
+            enabled_models = benchmark_config.enabled_models()
+            with self._lock:
+                if self._connectivity_state.check_id != check_id:
+                    return
+                self._connectivity_state.status = "running"
+                self._connectivity_state.summary = "LLM-Endpunkte werden nacheinander geprueft."
+                self._append_connectivity_event_locked(
+                    event="connectivity_check_started",
+                    stage="running",
+                    level="info",
+                    summary=f"Pruefe {len(enabled_models)} Modellziele auf Erreichbarkeit.",
+                    details={"model_count": len(enabled_models)},
+                )
+                self._persist_locked()
+
+            for model_config in enabled_models:
+                with self._lock:
+                    if self._connectivity_state.check_id != check_id:
+                        return
+                    self._connectivity_state.current_model_label = model_config.label
+                    self._append_connectivity_event_locked(
+                        event="connectivity_probe_started",
+                        stage="running",
+                        level="info",
+                        summary=f"Pruefe {model_config.label} ueber {model_config.base_url}/models.",
+                        details={"model_id": model_config.id, "endpoint": model_config.base_url},
+                    )
+                    self._persist_locked()
+
+                result = self._probe_model_endpoint(
+                    model_config=model_config,
+                    default_timeout_seconds=benchmark_config.run_defaults.default_timeout_seconds,
+                )
+
+                with self._lock:
+                    if self._connectivity_state.check_id != check_id:
+                        return
+                    self._connectivity_state.results.append(result)
+                    self._connectivity_state.checked_models += 1
+                    if result.ok:
+                        self._connectivity_state.reachable_models += 1
+                    else:
+                        self._connectivity_state.failed_models += 1
+                        self._connectivity_state.latest_error = result.message
+                    self._append_connectivity_event_locked(
+                        event="connectivity_probe_finished",
+                        stage="running",
+                        level="success" if result.ok else "error",
+                        summary=f"{result.model_label}: {result.message}",
+                        details=asdict(result),
+                    )
+                    self._persist_locked()
+
+            with self._lock:
+                if self._connectivity_state.check_id != check_id:
+                    return
+                self._connectivity_state.status = (
+                    "succeeded" if self._connectivity_state.failed_models == 0 else "failed"
+                )
+                self._connectivity_state.finished_at = isoformat_utc()
+                self._connectivity_state.current_model_label = None
+                self._connectivity_state.summary = (
+                    f"{self._connectivity_state.reachable_models} von {self._connectivity_state.total_models} "
+                    "Modellzielen antworten auf den Reachability-Check."
+                )
+                self._append_connectivity_event_locked(
+                    event="connectivity_check_finished",
+                    stage="completed",
+                    level="success" if self._connectivity_state.failed_models == 0 else "warning",
+                    summary=self._connectivity_state.summary,
+                    details={},
+                )
+                self._persist_locked()
+        except Exception as exc:
+            LOGGER.exception("Dashboard connectivity check failed.")
+            with self._lock:
+                if self._connectivity_state.check_id != check_id:
+                    return
+                self._connectivity_state.status = "failed"
+                self._connectivity_state.finished_at = isoformat_utc()
+                self._connectivity_state.latest_error = str(exc)
+                self._connectivity_state.summary = f"Erreichbarkeits-Check fehlgeschlagen: {exc}"
+                self._append_connectivity_event_locked(
+                    event="connectivity_check_failed",
+                    stage="failed",
+                    level="error",
+                    summary=self._connectivity_state.summary,
+                    details={"error": str(exc)},
+                )
+                self._persist_locked()
+
     def _set_running_locked(self, run_id: str) -> None:
         with self._lock:
             if self._state.run_id != run_id:
@@ -450,6 +633,28 @@ class DashboardRunManager:
         )
         self._state.events = self._state.events[:120]
 
+    def _append_connectivity_event_locked(
+        self,
+        *,
+        event: str,
+        stage: str,
+        level: str,
+        summary: str,
+        details: dict[str, Any],
+    ) -> None:
+        self._connectivity_state.events.insert(
+            0,
+            TimelineEvent(
+                timestamp=isoformat_utc(),
+                event=event,
+                stage=stage,
+                level=level,
+                summary=summary,
+                details=details,
+            ),
+        )
+        self._connectivity_state.events = self._connectivity_state.events[:80]
+
     def _push_history_locked(self) -> None:
         history_entry = {
             "run_id": self._state.run_id,
@@ -505,6 +710,7 @@ class DashboardRunManager:
     def _persist_locked(self) -> None:
         json_dump_to_path(self.state_path, asdict(self._state), pretty=True)
         json_dump_to_path(self.history_path, self._history, pretty=True)
+        json_dump_to_path(self.connectivity_state_path, asdict(self._connectivity_state), pretty=True)
 
     def _load_state(self) -> RunState:
         if not self.state_path.exists():
@@ -537,3 +743,145 @@ class DashboardRunManager:
         except Exception as exc:
             LOGGER.warning("Could not restore dashboard run history: %s", exc)
             return []
+
+    def _load_connectivity_state(self) -> ConnectivityState:
+        if not self.connectivity_state_path.exists():
+            return ConnectivityState()
+        try:
+            raw_state = orjson.loads(self.connectivity_state_path.read_bytes())
+            events = [
+                TimelineEvent(**event_payload)
+                for event_payload in raw_state.get("events", [])
+            ]
+            results = [
+                ConnectivityResult(**result_payload)
+                for result_payload in raw_state.get("results", [])
+            ]
+            restored = ConnectivityState(**(raw_state | {"events": events, "results": results}))
+            if restored.status == "running":
+                restored.status = "interrupted"
+                restored.summary = "Vorheriger Erreichbarkeits-Check wurde unterbrochen."
+            return restored
+        except Exception as exc:
+            LOGGER.warning("Could not restore connectivity check state: %s", exc)
+            return ConnectivityState()
+
+    def _probe_model_endpoint(self, *, model_config: Any, default_timeout_seconds: float) -> ConnectivityResult:
+        """
+        Probe a provider with a cheap `/models` request so operators can validate reachability without a real benchmark.
+
+        Example interpretation:
+        - `reachable`: endpoint answered and the configured model was listed
+        - `reachable_model_missing`: endpoint answered but the configured model name was not returned
+        - `missing_api_key` / `timeout` / `network_error`: benchmark would currently fail for this model
+        """
+
+        headers = {"Accept": "application/json"}
+        if model_config.api_key_env:
+            api_key = os.getenv(model_config.api_key_env)
+            if not api_key:
+                return ConnectivityResult(
+                    model_id=model_config.id,
+                    model_label=model_config.label,
+                    provider=model_config.provider,
+                    endpoint=model_config.base_url,
+                    model_name=model_config.model_name,
+                    ok=False,
+                    status="missing_api_key",
+                    message=f"API-Key-Variable {model_config.api_key_env} ist nicht gesetzt.",
+                )
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        timeout_seconds = min(model_config.effective_timeout(default_timeout_seconds), 15.0)
+        url = f"{model_config.base_url}/models"
+        start = perf_counter()
+        try:
+            with httpx.Client(timeout=httpx.Timeout(timeout_seconds)) as client:
+                response = client.get(url, headers=headers)
+            duration_ms = round((perf_counter() - start) * 1000, 2)
+        except httpx.TimeoutException:
+            return ConnectivityResult(
+                model_id=model_config.id,
+                model_label=model_config.label,
+                provider=model_config.provider,
+                endpoint=model_config.base_url,
+                model_name=model_config.model_name,
+                ok=False,
+                status="timeout",
+                message=f"Endpoint antwortet nicht innerhalb von {timeout_seconds} Sekunden.",
+            )
+        except httpx.TransportError as exc:
+            return ConnectivityResult(
+                model_id=model_config.id,
+                model_label=model_config.label,
+                provider=model_config.provider,
+                endpoint=model_config.base_url,
+                model_name=model_config.model_name,
+                ok=False,
+                status="network_error",
+                message=f"Netzwerkfehler beim Zugriff auf {url}: {exc}",
+            )
+
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {}
+
+        listed_models = [
+            str(item.get("id"))
+            for item in payload.get("data", [])
+            if isinstance(item, dict) and item.get("id") is not None
+        ] if isinstance(payload, dict) else []
+        model_listed = model_config.model_name in listed_models if listed_models else None
+
+        if response.status_code >= 400:
+            message = "Endpoint ist erreichbar, hat den Check aber abgelehnt."
+            if isinstance(payload, dict):
+                error_message = payload.get("error", {}).get("message") if isinstance(payload.get("error"), dict) else payload.get("message")
+                if isinstance(error_message, str) and error_message:
+                    message = error_message
+            return ConnectivityResult(
+                model_id=model_config.id,
+                model_label=model_config.label,
+                provider=model_config.provider,
+                endpoint=model_config.base_url,
+                model_name=model_config.model_name,
+                ok=False,
+                status="http_error",
+                message=f"HTTP {response.status_code}: {message}",
+                http_status=response.status_code,
+                duration_ms=duration_ms,
+                model_listed=model_listed,
+                listed_models_preview=listed_models[:8],
+            )
+
+        if model_listed is False:
+            return ConnectivityResult(
+                model_id=model_config.id,
+                model_label=model_config.label,
+                provider=model_config.provider,
+                endpoint=model_config.base_url,
+                model_name=model_config.model_name,
+                ok=False,
+                status="reachable_model_missing",
+                message="Endpoint antwortet, aber der konfigurierte Modellname ist in /models nicht sichtbar.",
+                http_status=response.status_code,
+                duration_ms=duration_ms,
+                model_listed=False,
+                listed_models_preview=listed_models[:8],
+            )
+
+        return ConnectivityResult(
+            model_id=model_config.id,
+            model_label=model_config.label,
+            provider=model_config.provider,
+            endpoint=model_config.base_url,
+            model_name=model_config.model_name,
+            ok=True,
+            status="reachable",
+            message="Endpoint und Modell sind erreichbar.",
+            http_status=response.status_code,
+            duration_ms=duration_ms,
+            model_listed=model_listed,
+            listed_models_preview=listed_models[:8],
+        )

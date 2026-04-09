@@ -230,6 +230,21 @@ input {
   cursor: not-allowed;
 }
 
+.secondary-button {
+  height: 44px;
+  border: 1px solid rgba(0, 229, 255, 0.24);
+  border-radius: 12px;
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--cyan);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .metric-grid,
 .card-grid,
 .download-grid {
@@ -376,6 +391,12 @@ tbody tr:hover {
   align-items: end;
 }
 
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
 .run-facts,
 .run-meta-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -384,6 +405,10 @@ tbody tr:hover {
 
 .progress-shell {
   margin: 18px 0;
+}
+
+.table-wrapper {
+  overflow-x: auto;
 }
 
 .progress-track {
@@ -493,6 +518,10 @@ pre {
   .run-form,
   .run-facts,
   .run-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-row {
     grid-template-columns: 1fr;
   }
 

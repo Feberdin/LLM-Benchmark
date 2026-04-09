@@ -33,6 +33,8 @@ Das Tool hostet diese Modelle nicht selbst. Es arbeitet als zentraler Benchmark-
 
 Das integrierte Dashboard laeuft im selben Container und nutzt denselben Benchmark-Pfad wie die CLI. Es liest die vorhandenen Ergebnisdateien direkt, kann aber zusaetzlich kontrolliert einen neuen Benchmark im Hintergrund starten und dessen Status sichtbar machen.
 
+Vor dem eigentlichen Benchmark kann das Dashboard ausserdem per Button einen leichten LLM-Erreichbarkeits-Check ausfuehren. Dieser prueft fuer alle aktiven Modelle den OpenAI-kompatiblen `/models`-Endpunkt, inklusive Auth und Sichtbarkeit des konfigurierten Modellnamens.
+
 Verfuegbare Routen:
 
 - `/dashboard`
@@ -40,6 +42,8 @@ Verfuegbare Routen:
 - `/api/dashboard/run/current`
 - `/api/dashboard/run/history`
 - `/api/dashboard/run/start`
+- `/api/dashboard/connectivity/current`
+- `/api/dashboard/connectivity/check`
 - `/api/dashboard/summary`
 - `/api/dashboard/models`
 - `/api/dashboard/categories`
@@ -524,10 +528,11 @@ Dann ist das Dashboard unter `http://<unraid-ip>:8080/dashboard` erreichbar.
 Bevorzugter Weg auf Unraid:
 
 1. Dashboard unter `http://<unraid-ip>:8080/dashboard` oeffnen.
-2. Im Bereich `Run Control` die Suite `quick_compare` waehlen.
-3. `Benchmark starten` klicken.
-4. Timeline, Fortschrittsbalken und Historie im selben Webinterface verfolgen.
-5. Nach Abschluss aktualisiert das Dashboard die Reports automatisch.
+2. Im Bereich `Run Control` zuerst optional `LLM-Erreichbarkeit pruefen` klicken.
+3. Danach die Suite `quick_compare` waehlen.
+4. `Benchmark starten` klicken.
+5. Timeline, Fortschrittsbalken und Historie im selben Webinterface verfolgen.
+6. Nach Abschluss aktualisiert das Dashboard die Reports automatisch.
 
 Alternative fuer CLI/Terminal:
 

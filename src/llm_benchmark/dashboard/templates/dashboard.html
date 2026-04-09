@@ -70,14 +70,24 @@
                 {% endfor %}
               </select>
             </label>
-            <button
-              id="run-start-button"
-              type="submit"
-              class="primary-button"
-              {% if run_state.status in ["queued", "running"] or run_preflight.errors %}disabled{% endif %}
-            >
-              Benchmark starten
-            </button>
+            <div class="action-row">
+              <button
+                id="connectivity-check-button"
+                type="button"
+                class="secondary-button"
+                {% if connectivity.status == "running" %}disabled{% endif %}
+              >
+                LLM-Erreichbarkeit pruefen
+              </button>
+              <button
+                id="run-start-button"
+                type="submit"
+                class="primary-button"
+                {% if run_state.status in ["queued", "running"] or run_preflight.errors %}disabled{% endif %}
+              >
+                Benchmark starten
+              </button>
+            </div>
           </form>
 
           <div class="run-facts">
@@ -96,6 +106,7 @@
           </div>
 
           <div id="run-form-message" class="inline-message hidden"></div>
+          <div id="connectivity-form-message" class="inline-message hidden"></div>
 
           {% if run_preflight.errors %}
             <div class="alert danger-alert" id="preflight-errors">
@@ -118,6 +129,70 @@
               </ul>
             </div>
           {% endif %}
+
+          <div class="alert subtle-alert">
+            <div class="row-head">
+              <div>
+                <h3>LLM-Erreichbarkeits-Check</h3>
+                <p class="muted">
+                  Prueft fuer alle aktiven Modelle schnell den OpenAI-kompatiblen <code>/models</code>-Endpunkt,
+                  inklusive Auth und Sichtbarkeit des konfigurierten Modellnamens.
+                </p>
+              </div>
+              <span id="connectivity-status-badge" class="status-badge {{ 'success' if connectivity.status == 'succeeded' else 'danger' if connectivity.status == 'failed' else 'warning' if connectivity.status == 'running' else 'neutral' }}">
+                {{ connectivity.status }}
+              </span>
+            </div>
+
+            <div class="run-facts">
+              <div class="mini-card">
+                <span>Geprueft</span>
+                <strong id="connectivity-checked">{{ connectivity.checked_models }} / {{ connectivity.total_models }}</strong>
+              </div>
+              <div class="mini-card">
+                <span>Erreichbar</span>
+                <strong id="connectivity-reachable">{{ connectivity.reachable_models }}</strong>
+              </div>
+              <div class="mini-card">
+                <span>Probleme</span>
+                <strong id="connectivity-failed">{{ connectivity.failed_models }}</strong>
+              </div>
+            </div>
+
+            <p id="connectivity-summary">{{ connectivity.summary or "Vor dem ersten Benchmark kannst du hier die Modellziele schnell pruefen." }}</p>
+
+            <div id="connectivity-latest-error" class="alert danger-alert {% if not connectivity.latest_error %}hidden{% endif %}">
+              <h3>Letzter Connectivity-Fehler</h3>
+              <p>{{ connectivity.latest_error or "" }}</p>
+            </div>
+
+            <div class="table-wrapper">
+              <table id="connectivity-results-table">
+                <thead>
+                  <tr>
+                    <th>Modell</th>
+                    <th>Status</th>
+                    <th>Dauer</th>
+                    <th>HTTP</th>
+                    <th>Hinweis</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in connectivity.results %}
+                    <tr>
+                      <td>{{ row.model_label }}</td>
+                      <td>{{ row.status }}</td>
+                      <td>{{ row.duration_ms or "n/a" }}</td>
+                      <td>{{ row.http_status or "n/a" }}</td>
+                      <td>{{ row.message }}</td>
+                    </tr>
+                  {% else %}
+                    <tr><td colspan="5">Noch kein LLM-Erreichbarkeits-Check ausgefuehrt.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </article>
 
         <article class="panel-card">
@@ -652,6 +727,7 @@
     <script>
       const initialRunPayload = {{ run_payload | tojson }};
       let lastKnownStatus = initialRunPayload.state.status;
+      let lastKnownConnectivityStatus = initialRunPayload.connectivity.status;
 
       function badgeClassFromStatus(status) {
         if (status === "succeeded") return "success";
@@ -733,6 +809,51 @@
         node.innerHTML = (warnings || []).map((item) => `<li><p>${item}</p></li>`).join("");
       }
 
+      function renderConnectivityPayload(payload) {
+        const statusBadge = document.getElementById("connectivity-status-badge");
+        if (statusBadge) {
+          statusBadge.textContent = payload.status;
+          statusBadge.className = `status-badge ${badgeClassFromStatus(payload.status)}`;
+        }
+
+        setText("connectivity-checked", `${payload.checked_models || 0} / ${payload.total_models || 0}`);
+        setText("connectivity-reachable", String(payload.reachable_models || 0));
+        setText("connectivity-failed", String(payload.failed_models || 0));
+        setText("connectivity-summary", payload.summary || "Vor dem ersten Benchmark kannst du hier die Modellziele schnell pruefen.");
+
+        const latestError = document.getElementById("connectivity-latest-error");
+        if (latestError) {
+          if (payload.latest_error) {
+            latestError.classList.remove("hidden");
+            latestError.querySelector("p").textContent = payload.latest_error;
+          } else {
+            latestError.classList.add("hidden");
+          }
+        }
+
+        const checkButton = document.getElementById("connectivity-check-button");
+        if (checkButton) {
+          checkButton.disabled = payload.status === "running";
+        }
+
+        const tableBody = document.querySelector("#connectivity-results-table tbody");
+        if (tableBody) {
+          if (!payload.results || payload.results.length === 0) {
+            tableBody.innerHTML = "<tr><td colspan='5'>Noch kein LLM-Erreichbarkeits-Check ausgefuehrt.</td></tr>";
+          } else {
+            tableBody.innerHTML = payload.results.map((row) => `
+              <tr>
+                <td>${row.model_label}</td>
+                <td>${row.status}</td>
+                <td>${row.duration_ms ?? "n/a"}</td>
+                <td>${row.http_status ?? "n/a"}</td>
+                <td>${row.message}</td>
+              </tr>
+            `).join("");
+          }
+        }
+      }
+
       function renderRunPayload(payload) {
         const state = payload.state;
         const preflight = payload.preflight;
@@ -795,6 +916,7 @@
         renderHistory(payload.history || []);
         renderGeneratedFiles(state.generated_files || []);
         renderWarnings(preflight.warnings || []);
+        renderConnectivityPayload(payload.connectivity || {});
       }
 
       async function pollRunState() {
@@ -811,6 +933,21 @@
           lastKnownStatus = payload.state.status;
         } catch (error) {
           console.error("Could not poll dashboard run state", error);
+        }
+      }
+
+      async function pollConnectivityState() {
+        try {
+          const response = await fetch("/api/dashboard/connectivity/current", { cache: "no-store" });
+          if (!response.ok) return;
+          const payload = await response.json();
+          renderConnectivityPayload(payload);
+          if (lastKnownConnectivityStatus === "running" && ["succeeded", "failed"].includes(payload.status)) {
+            await pollRunState();
+          }
+          lastKnownConnectivityStatus = payload.status;
+        } catch (error) {
+          console.error("Could not poll dashboard connectivity state", error);
         }
       }
 
@@ -849,8 +986,41 @@
         }
       });
 
+      document.getElementById("connectivity-check-button")?.addEventListener("click", async () => {
+        const message = document.getElementById("connectivity-form-message");
+        if (message) {
+          message.classList.add("hidden");
+          message.textContent = "";
+        }
+        try {
+          const response = await fetch("/api/dashboard/connectivity/check", { method: "POST" });
+          const payload = await response.json();
+          if (!response.ok) {
+            if (message) {
+              message.textContent = payload.detail || "Erreichbarkeits-Check konnte nicht gestartet werden.";
+              message.className = "inline-message danger-text";
+            }
+            return;
+          }
+          lastKnownConnectivityStatus = payload.status || "queued";
+          if (message) {
+            message.textContent = "Erreichbarkeits-Check wurde gestartet.";
+            message.className = "inline-message success-text";
+          }
+          await pollConnectivityState();
+        } catch (error) {
+          if (message) {
+            message.textContent = `Erreichbarkeits-Check konnte nicht gestartet werden: ${error}`;
+            message.className = "inline-message danger-text";
+          }
+        }
+      });
+
       renderRunPayload(initialRunPayload);
-      window.setInterval(pollRunState, 2500);
+      window.setInterval(() => {
+        pollRunState();
+        pollConnectivityState();
+      }, 2500);
     </script>
   </body>
 </html>

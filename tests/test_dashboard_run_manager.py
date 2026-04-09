@@ -14,7 +14,7 @@ import time
 from fastapi.testclient import TestClient
 
 from llm_benchmark.dashboard.app import create_dashboard_app
-from llm_benchmark.dashboard.run_manager import DashboardRunManager
+from llm_benchmark.dashboard.run_manager import ConnectivityResult, DashboardRunManager
 
 
 def _write_config(path: Path) -> None:
@@ -177,3 +177,54 @@ def test_dashboard_api_can_start_and_track_background_run(tmp_path: Path, monkey
         assert current_payload["state"]["benchmark_run_id"] == "bench-123"
         assert "final_report.json" in current_payload["state"]["generated_files"]
         assert current_payload["history"][0]["status"] == "succeeded"
+
+
+def test_dashboard_api_can_run_connectivity_check(tmp_path: Path, monkeypatch) -> None:
+    config_path = tmp_path / "config.yaml"
+    tests_dir = tmp_path / "tests"
+    results_dir = tmp_path / "results"
+    tests_dir.mkdir()
+    results_dir.mkdir()
+    _write_config(config_path)
+    _write_test_case(tests_dir / "quick_compare.yaml")
+
+    def fake_probe(self, *, model_config, default_timeout_seconds):
+        assert model_config.id == "mistral_local"
+        return ConnectivityResult(
+            model_id=model_config.id,
+            model_label=model_config.label,
+            provider=model_config.provider,
+            endpoint=model_config.base_url,
+            model_name=model_config.model_name,
+            ok=True,
+            status="reachable",
+            message="Endpoint und Modell sind erreichbar.",
+            http_status=200,
+            duration_ms=42.0,
+            model_listed=True,
+            listed_models_preview=[model_config.model_name],
+        )
+
+    monkeypatch.setattr(DashboardRunManager, "_probe_model_endpoint", fake_probe)
+
+    app = create_dashboard_app(config_path=config_path, results_dir=results_dir, tests_dir=tests_dir)
+
+    with TestClient(app) as client:
+        start_response = client.post("/api/dashboard/connectivity/check")
+        assert start_response.status_code == 202
+
+        deadline = time.time() + 3.0
+        current_payload = None
+        while time.time() < deadline:
+            current_response = client.get("/api/dashboard/connectivity/current")
+            assert current_response.status_code == 200
+            current_payload = current_response.json()
+            if current_payload["status"] == "succeeded":
+                break
+            time.sleep(0.05)
+
+        assert current_payload is not None
+        assert current_payload["status"] == "succeeded"
+        assert current_payload["reachable_models"] == 1
+        assert current_payload["failed_models"] == 0
+        assert current_payload["results"][0]["status"] == "reachable"

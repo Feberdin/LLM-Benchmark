@@ -47,7 +47,9 @@ def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Pat
     @app.get("/health")
     async def health() -> JSONResponse:
         payload = service.health()
-        payload["run_status"] = run_manager.current_payload(include_preflight=False).get("state", {}).get("status")
+        current_payload = run_manager.current_payload(include_preflight=False)
+        payload["run_status"] = current_payload.get("state", {}).get("status")
+        payload["connectivity_status"] = current_payload.get("connectivity", {}).get("status")
         return JSONResponse(payload)
 
     @app.get("/dashboard")
@@ -77,6 +79,7 @@ def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Pat
         context["run_state"] = run_payload["state"]
         context["run_preflight"] = run_payload["preflight"]
         context["run_history"] = run_payload["history"]
+        context["connectivity"] = run_payload["connectivity"]
         template = template_env.get_template("dashboard.html")
         return HTMLResponse(template.render(request=request, **context))
 
@@ -96,6 +99,20 @@ def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Pat
     async def api_run_start(suite: str | None = Query(None)) -> JSONResponse:
         try:
             payload = run_manager.start_run(suite=suite)
+            return JSONResponse(payload, status_code=202)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/dashboard/connectivity/current")
+    async def api_connectivity_current() -> JSONResponse:
+        return JSONResponse(run_manager.connectivity_payload())
+
+    @app.post("/api/dashboard/connectivity/check")
+    async def api_connectivity_check() -> JSONResponse:
+        try:
+            payload = run_manager.start_connectivity_check()
             return JSONResponse(payload, status_code=202)
         except RuntimeError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
