@@ -123,4 +123,6 @@ def test_dashboard_service_builds_context_from_artifacts(tmp_path: Path) -> None
     assert context["overview"]["has_results"] is True
     assert context["models"][0]["model_label"] == "OpenAI Reference"
     assert any(item["name"] == "final_report.json" for item in context["downloads"])
+    assert context["overview"]["repo_cards"][0]["has_data"] is False
+    assert "No measured runs are available yet" in context["overview"]["repo_cards"][0]["summary"]
     assert service.health()["status"] == "ok"

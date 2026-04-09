@@ -469,8 +469,15 @@
                 {% for card in overview.repo_cards %}
                   <article class="mini-card">
                     <span>{{ card.title }}</span>
-                    <strong>{{ card.payload.model_label if card.payload else "n/a" }}</strong>
-                    <small>{{ card.payload.avg_total_score if card.payload else "-" }}</small>
+                    <strong>{{ card.payload.model_label if card.payload else "Noch keine Suite-Daten" }}</strong>
+                    <small>
+                      {% if card.payload %}
+                        {{ card.payload.avg_total_score }}
+                      {% else %}
+                        Suite {{ card.suite_name }} noch nicht gemessen
+                      {% endif %}
+                    </small>
+                    <p class="muted">{{ card.summary }}</p>
                   </article>
                 {% endfor %}
               </div>
@@ -644,8 +651,15 @@
             {% for card in domains.recommendation_cards %}
               <article class="model-card">
                 <span class="status-badge accent">{{ card.title }}</span>
-                <h2>{{ card.payload.model_label if card.payload else "n/a" }}</h2>
-                <p>{{ card.payload.avg_total_score if card.payload else "-" }}</p>
+                <h2>{{ card.payload.model_label if card.payload else "Noch keine Suite-Daten" }}</h2>
+                <p>
+                  {% if card.payload %}
+                    {{ card.payload.avg_total_score }}
+                  {% else %}
+                    Suite {{ card.suite_name }} noch nicht gemessen
+                  {% endif %}
+                </p>
+                <p class="muted">{{ card.summary }}</p>
               </article>
             {% endfor %}
           </section>
@@ -675,6 +689,8 @@
                         <td>{{ row.validation_pass_rate }}</td>
                         <td>{{ row.success_rate }}</td>
                       </tr>
+                    {% else %}
+                      <tr><td colspan="5">Keine Messdaten fuer diese Projektsuite vorhanden.</td></tr>
                     {% endfor %}
                   </tbody>
                 </table>

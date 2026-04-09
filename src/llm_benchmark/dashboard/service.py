@@ -340,20 +340,7 @@ class DashboardService:
             "recommendations": analysis_input.get("follow_up_recommendations", final_report.get("recommendations", [])),
             "anomalies": anomalies[:6],
             "downloads": downloads[:6],
-            "repo_cards": [
-                {
-                    "title": "Bestes Modell fuer SecondBrain",
-                    "payload": analysis_input.get("best_model_for_secondbrain"),
-                },
-                {
-                    "title": "Bestes Modell fuer secondbrain-voice-gateway",
-                    "payload": analysis_input.get("best_model_for_voice_gateway"),
-                },
-                {
-                    "title": "Bestes Modell fuer Paperless-KIplus",
-                    "payload": analysis_input.get("best_model_for_paperless_kiplus"),
-                }
-            ],
+            "repo_cards": self._build_repo_cards(analysis_input),
         }
 
     def _build_model_cards(self, frame: pd.DataFrame) -> list[dict[str, Any]]:
@@ -505,20 +492,7 @@ class DashboardService:
         focus_rankings = self._build_focus_area_rankings(frame)
         return {
             "repo_recommendations": repo_recommendations,
-            "recommendation_cards": [
-                {
-                    "title": "Bestes Modell fuer SecondBrain",
-                    "payload": analysis_input.get("best_model_for_secondbrain"),
-                },
-                {
-                    "title": "Bestes Modell fuer secondbrain-voice-gateway",
-                    "payload": analysis_input.get("best_model_for_voice_gateway"),
-                },
-                {
-                    "title": "Bestes Modell fuer Paperless-KIplus",
-                    "payload": analysis_input.get("best_model_for_paperless_kiplus"),
-                },
-            ],
+            "recommendation_cards": self._build_repo_cards(analysis_input),
             "focus_area_rankings": focus_rankings,
             "security_behavior_summary": analysis_input.get("security_behavior_summary", {}),
             "structured_output_summary": analysis_input.get("structured_output_summary", {}),
@@ -526,6 +500,39 @@ class DashboardService:
             "tax_enrichment_summary": analysis_input.get("tax_enrichment_summary", {}),
             "tests_available": sorted(tests_lookup.keys()),
         }
+
+    def _build_repo_cards(self, analysis_input: dict[str, Any]) -> list[dict[str, Any]]:
+        """
+        Build recommendation cards that stay explanatory even when a project suite has not been executed yet.
+
+        Why this exists:
+        The reporting layer correctly returns `best_model = null` when there is no measured data for a repo-specific
+        suite. The dashboard should still tell the operator what is missing instead of only rendering `n/a`.
+        """
+
+        repo_recommendations = analysis_input.get("repo_recommendations", {})
+        card_specs = [
+            ("secondbrain", "Bestes Modell fuer SecondBrain", "best_model_for_secondbrain"),
+            ("voice_gateway", "Bestes Modell fuer secondbrain-voice-gateway", "best_model_for_voice_gateway"),
+            ("paperless_kiplus", "Bestes Modell fuer Paperless-KIplus", "best_model_for_paperless_kiplus"),
+        ]
+
+        cards: list[dict[str, Any]] = []
+        for repo_key, title, analysis_key in card_specs:
+            repo = repo_recommendations.get(repo_key, {})
+            payload = analysis_input.get(analysis_key) or repo.get("best_model")
+            cards.append(
+                {
+                    "repo_key": repo_key,
+                    "title": title,
+                    "payload": payload,
+                    "has_data": bool(payload),
+                    "project_label": repo.get("project_label", title),
+                    "suite_name": repo.get("suite_name", repo_key),
+                    "summary": repo.get("benchmark_fit_summary", "Noch keine projektspezifischen Messdaten vorhanden."),
+                }
+            )
+        return cards
 
     def _build_focus_area_rankings(self, frame: pd.DataFrame) -> list[dict[str, Any]]:
         if frame.empty:
