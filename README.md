@@ -22,7 +22,8 @@ Das Tool hostet diese Modelle nicht selbst. Es arbeitet als zentraler Benchmark-
 - Bewertet Qualitaet, Format-Treue, Latenz, Stabilitaet, Instruktionsbefolgung und Reproduzierbarkeit.
 - Exportiert Rohdaten als JSONL und CSV.
 - Exportiert Aggregationen als CSV, Markdown, HTML, `final_report.json` und `analysis_input.json`.
-- Liefert ein integriertes read-only Web-Dashboard auf Basis derselben Ergebnisdateien.
+- Liefert ein integriertes Web-Dashboard auf Basis derselben Ergebnisdateien.
+- Kann Benchmarks direkt aus dem Dashboard starten und den Fortschritt mit Timeline, Status und Historie anzeigen.
 - Zeigt projektbezogene Empfehlungen fuer SecondBrain, secondbrain-voice-gateway und Paperless-KIplus.
 - Arbeitet robust weiter, auch wenn einzelne Endpunkte fehlschlagen, timeouts produzieren oder keine Token-Metriken liefern.
 - Ist fuer Unraid-Mounts mit `/config`, `/app/tests` und `/app/results` vorbereitet.
@@ -30,12 +31,15 @@ Das Tool hostet diese Modelle nicht selbst. Es arbeitet als zentraler Benchmark-
 
 ## Dashboard
 
-Das integrierte Dashboard laeuft im selben Container und liest ausschliesslich vorhandene Ergebnisdateien. Es fuehrt keine Benchmarks selbst aus und schreibt keine Ergebnisse um.
+Das integrierte Dashboard laeuft im selben Container und nutzt denselben Benchmark-Pfad wie die CLI. Es liest die vorhandenen Ergebnisdateien direkt, kann aber zusaetzlich kontrolliert einen neuen Benchmark im Hintergrund starten und dessen Status sichtbar machen.
 
 Verfuegbare Routen:
 
 - `/dashboard`
 - `/health`
+- `/api/dashboard/run/current`
+- `/api/dashboard/run/history`
+- `/api/dashboard/run/start`
 - `/api/dashboard/summary`
 - `/api/dashboard/models`
 - `/api/dashboard/categories`
@@ -119,7 +123,7 @@ Das Projekt bleibt bewusst in einer einzigen Architektur:
 6. `reporting`
    Baut CSV-, Markdown-, HTML-, Final-JSON- und Analyse-JSON-Reports.
 7. `dashboard`
-   Serviert ein read-only Web-Dashboard direkt aus den vorhandenen Ergebnisdateien.
+   Serviert das Web-Dashboard direkt aus den vorhandenen Ergebnisdateien und kann optional neue Runs im Hintergrund starten.
 
 Wichtige Architekturentscheidung:
 
@@ -279,6 +283,7 @@ Die Vorlage liegt unter [llm-benchmark.xml](/Users/joachim.stiegler/LLM-Benchmar
 Wichtige Eigenschaften:
 
 - direkte Mounts fuer `/config`, `/app/results`, `/app/tests`
+- Repository in der XML steht bewusst auf `llm-benchmark:local`, weil das Unraid-Template fuer ein lokal gebautes Image gedacht ist
 - optionaler Dashboard-Port `8080`
 - `BENCHMARK_ACTION=dashboard` als sinnvoller Default fuer persistenten Betrieb
 - `BENCHMARK_ACTION=run` fuer One-Shot-Benchmark-Jobs
@@ -499,6 +504,12 @@ Im Unraid-Template oder Container-Setup:
 
 Importiere [llm-benchmark.xml](/Users/joachim.stiegler/LLM-Benchmark/unraid/llm-benchmark.xml) oder uebernimm dessen Felder manuell.
 
+Wichtig:
+
+- Die XML erwartet aktuell ein lokal gebautes Image `llm-benchmark:local`.
+- Falls du das Repo direkt auf Unraid gebaut hast, passt das bereits.
+- Falls du spaeter ein eigenes Registry-Image nutzt, kannst du das Repository-Feld im Template entsprechend ueberschreiben.
+
 Fuer den persistenten Dashboard-Betrieb:
 
 - `BENCHMARK_AUTO_RUN=true`
@@ -510,14 +521,24 @@ Dann ist das Dashboard unter `http://<unraid-ip>:8080/dashboard` erreichbar.
 
 ### 6. Ersten Benchmark-Lauf ausfuehren
 
-Fuer einen One-Shot-Run gibt es zwei typische Wege:
+Bevorzugter Weg auf Unraid:
 
-1. Im Unraid-Template temporaer `BENCHMARK_ACTION=run` und z. B. `BENCHMARK_SUITE=quick_compare` setzen, Container starten und nach dem Lauf wieder auf `dashboard` zurueckstellen.
-2. Im laufenden Container manuell ausfuehren:
+1. Dashboard unter `http://<unraid-ip>:8080/dashboard` oeffnen.
+2. Im Bereich `Run Control` die Suite `quick_compare` waehlen.
+3. `Benchmark starten` klicken.
+4. Timeline, Fortschrittsbalken und Historie im selben Webinterface verfolgen.
+5. Nach Abschluss aktualisiert das Dashboard die Reports automatisch.
+
+Alternative fuer CLI/Terminal:
 
 ```bash
 benchmark run --config /config/config.unraid.example.yaml --suite quick_compare --tests-dir /app/tests --results-dir /app/results
 ```
+
+Hinweis:
+
+- `docker run --rm ... run ...` ist weiterhin moeglich, aber unkomfortabler fuer Unraid, weil der Job-Container nach Abschluss sofort verschwindet.
+- Fuer produktiven Betrieb ist `BENCHMARK_ACTION=dashboard` als dauerhafter Container die angenehmere Variante.
 
 ### 7. Ergebnisse finden
 
@@ -577,6 +598,8 @@ gemeinsam lesen.
   Pruefe Pfade, `${ENV_VAR}`-Platzhalter und Modell-IDs.
 - `Tests directory does not exist`
   Pruefe den Mount fuer `/app/tests`.
+- Run startet im Dashboard nicht
+  Pruefe die Preflight-Hinweise im Bereich `Run Control`. Ein leeres Unraid-Mount auf `/app/tests` ueberdeckt die eingebauten Fixture-Tests im Container.
 - `Missing required API key environment variables`
   Pruefe `OPENAI_API_KEY` oder andere referenzierte Secret-Variablen.
 - Viele `json_parse_failed` oder `yaml_parse_failed`
@@ -584,7 +607,7 @@ gemeinsam lesen.
 - Lokales Modell ist sehr langsam
   Erhoehe nicht zuerst die Parallelisierung. Pruefe lieber Quantisierung, Runtime-Flags, CPU-Last und `timeout_seconds`.
 - Dashboard zeigt keine Daten
-  Pruefe, ob `final_report.json`, `analysis_input.json` und `raw_runs.jsonl` in `/app/results` liegen.
+  Pruefe, ob `final_report.json`, `analysis_input.json` und `raw_runs.jsonl` in `/app/results` liegen oder starte den ersten Lauf direkt im Dashboard.
 
 ## Logs und Debugging
 
@@ -600,7 +623,7 @@ gemeinsam lesen.
 
 - API-Keys nie in YAML committen. Verwende `api_key_env` plus Umgebungsvariable.
 - Lokale Modellendpunkte sollten nur im vertrauenswuerdigen Netz erreichbar sein.
-- Das Dashboard ist read-only, aber nicht fuer oeffentliche Exposition ohne Reverse Proxy, Authentifizierung und Netzwerkgrenzen gedacht.
+- Das Dashboard ist fuer internes Betriebsnetz gedacht und sollte nicht ohne Reverse Proxy, Authentifizierung und Netzwerkgrenzen oeffentlich exponiert werden.
 - Secrets werden in Umgebungs-Metadaten nur maskiert dargestellt.
 
 ## Lizenz

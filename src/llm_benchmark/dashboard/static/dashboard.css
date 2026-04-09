@@ -225,6 +225,11 @@ input {
   cursor: pointer;
 }
 
+.primary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .metric-grid,
 .card-grid,
 .download-grid {
@@ -268,6 +273,10 @@ input {
   margin-bottom: 18px;
 }
 
+.run-layout {
+  align-items: start;
+}
+
 .stack {
   display: grid;
   gap: 16px;
@@ -286,6 +295,10 @@ input {
   border-radius: 14px;
   background: rgba(10, 15, 25, 0.52);
   border: 1px solid rgba(42, 53, 88, 0.7);
+}
+
+.signal-list.compact li {
+  padding: 10px 12px;
 }
 
 table {
@@ -339,11 +352,92 @@ tbody tr:hover {
   gap: 14px;
 }
 
+.metric-row.compact {
+  gap: 10px;
+}
+
 .details-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   margin-top: 16px;
+}
+
+.run-form,
+.run-facts,
+.run-meta-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.run-form {
+  grid-template-columns: minmax(0, 1fr) 220px;
+  margin: 18px 0 14px;
+  align-items: end;
+}
+
+.run-facts,
+.run-meta-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.progress-shell {
+  margin: 18px 0;
+}
+
+.progress-track {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(10, 15, 25, 0.76);
+  border: 1px solid rgba(42, 53, 88, 0.7);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--cyan), var(--pink));
+  box-shadow: var(--glow-cyan);
+  transition: width 0.35s ease;
+}
+
+.alert,
+.inline-message {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(42, 53, 88, 0.7);
+}
+
+.alert h3 {
+  margin-bottom: 10px;
+}
+
+.danger-alert {
+  background: rgba(255, 106, 139, 0.08);
+  border-color: rgba(255, 106, 139, 0.24);
+}
+
+.warning-alert {
+  background: rgba(255, 154, 60, 0.08);
+  border-color: rgba(255, 154, 60, 0.24);
+}
+
+.subtle-alert {
+  background: rgba(0, 229, 255, 0.05);
+  border-color: rgba(0, 229, 255, 0.16);
+}
+
+.inline-message {
+  background: rgba(10, 15, 25, 0.6);
+}
+
+.hidden {
+  display: none;
 }
 
 pre,
@@ -364,6 +458,11 @@ pre {
 
 .danger-text {
   color: var(--danger);
+  margin-top: 14px;
+}
+
+.success-text {
+  color: var(--green);
   margin-top: 14px;
 }
 
@@ -390,7 +489,10 @@ pre {
   .filters-grid,
   .metric-grid,
   .panel.two-column,
-  .details-grid {
+  .details-grid,
+  .run-form,
+  .run-facts,
+  .run-meta-grid {
     grid-template-columns: 1fr;
   }
 

@@ -1,13 +1,13 @@
 <!--
 Purpose: Unraid Docker template for the llm-benchmark benchmark-and-dashboard container.
 Input/Output: Imported into Unraid to mount persistent benchmark paths and configure dashboard or job execution.
-Invariants: The same container can stay online as a read-only dashboard or exit normally after a benchmark job.
+Invariants: The same container can stay online as a dashboard with web-triggered runs or exit normally after a benchmark job.
 Debugging: If the first start fails, inspect `/mnt/user/appdata/llm-benchmark/results` and Unraid container logs.
 -->
 <Container version="2">
   <Name>llm-benchmark</Name>
-  <Repository>ghcr.io/feberdin/llm-benchmark:latest</Repository>
-  <Registry>https://ghcr.io</Registry>
+  <Repository>llm-benchmark:local</Repository>
+  <Registry />
   <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
@@ -18,9 +18,9 @@ Debugging: If the first start fails, inspect `/mnt/user/appdata/llm-benchmark/re
   <WebUI>http://[IP]:[PORT:8080]/dashboard</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/Feberdin/LLM-Benchmark/main/unraid/llm-benchmark.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/Feberdin/LLM-Benchmark/main/docker/icon.png</Icon>
-  <Description>Benchmark and dashboard container for Unraid. It reads model config from /config, test cases from /app/tests, writes reports to /app/results and can either stay online as a read-only dashboard or auto-run a benchmark job on startup.</Description>
+  <Description>Benchmark and dashboard container for Unraid. It expects a locally built image named llm-benchmark:local, reads model config from /config, test cases from /app/tests, writes reports to /app/results and can stay online as a dashboard with web-triggered runs or auto-run a benchmark job on startup.</Description>
 
-  <Config Name="Dashboard Port" Target="8080" Default="8080" Mode="tcp" Type="Port" Display="always" Required="false" Description="Expose this port when BENCHMARK_ACTION=dashboard to access the integrated read-only web dashboard." />
+  <Config Name="Dashboard Port" Target="8080" Default="8080" Mode="tcp" Type="Port" Display="always" Required="false" Description="Expose this port when BENCHMARK_ACTION=dashboard to access the integrated web dashboard and start runs from the browser." />
 
   <Config Name="Config Path" Target="/config" Default="/mnt/user/appdata/llm-benchmark/config" Mode="rw" Type="Path" Display="always" Required="true" Description="Persistent benchmark configuration files." />
   <Config Name="Results Path" Target="/app/results" Default="/mnt/user/appdata/llm-benchmark/results" Mode="rw" Type="Path" Display="always" Required="true" Description="Persistent CSV, JSON, Markdown and HTML benchmark outputs." />
@@ -41,9 +41,9 @@ Debugging: If the first start fails, inspect `/mnt/user/appdata/llm-benchmark/re
   <Config Name="OpenAI Model Name" Target="OPENAI_MODEL_NAME" Default="gpt-4.1-mini" Mode="" Type="Variable" Display="advanced" Required="false" Description="Reference model name used in config.unraid.example.yaml." />
 
   <Config Name="Mistral Base URL" Target="MISTRAL_BASE_URL" Default="http://192.168.178.10:11434/v1" Mode="" Type="Variable" Display="always" Required="true" Description="OpenAI-compatible endpoint for your local Mistral runtime." />
-  <Config Name="Mistral Model Name" Target="MISTRAL_MODEL_NAME" Default="mistral-small-3.2" Mode="" Type="Variable" Display="advanced" Required="false" Description="Exact local runtime model id for Mistral." />
+  <Config Name="Mistral Model Name" Target="MISTRAL_MODEL_NAME" Default="mistral-small3.2" Mode="" Type="Variable" Display="advanced" Required="false" Description="Exact local runtime model id for Mistral." />
   <Config Name="Qwen Base URL" Target="QWEN_BASE_URL" Default="http://192.168.178.10:11434/v1" Mode="" Type="Variable" Display="always" Required="true" Description="OpenAI-compatible endpoint for your local Qwen runtime." />
-  <Config Name="Qwen Model Name" Target="QWEN_MODEL_NAME" Default="qwen3.5-35b-a3b" Mode="" Type="Variable" Display="advanced" Required="false" Description="Exact local runtime model id for Qwen." />
+  <Config Name="Qwen Model Name" Target="QWEN_MODEL_NAME" Default="qwen3.5:35b-a3b" Mode="" Type="Variable" Display="advanced" Required="false" Description="Exact local runtime model id for Qwen." />
 
   <Config Name="Log Level" Target="LOG_LEVEL" Default="INFO" Mode="" Type="Variable" Display="advanced" Required="false" Description="Standard runtime log level. Use DEBUG only when needed." />
   <Config Name="Default Timeout Seconds" Target="DEFAULT_TIMEOUT_SECONDS" Default="300" Mode="" Type="Variable" Display="advanced" Required="false" Description="Optional env override for external tooling or future config expansion." />

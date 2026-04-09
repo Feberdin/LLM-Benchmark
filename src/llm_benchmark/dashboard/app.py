@@ -1,8 +1,8 @@
 """
-Purpose: FastAPI entrypoint for the integrated read-only benchmark dashboard and JSON API.
-Input/Output: Serves HTML, download links and structured JSON views backed by benchmark artifact files.
-Important invariants: The dashboard must stay lightweight, read-only and easy to run inside the existing container.
-How to debug: Start with `/health`, then inspect dashboard service output through `/api/dashboard/summary`.
+Purpose: FastAPI entrypoint for the integrated benchmark dashboard, JSON API and lightweight run controls.
+Input/Output: Serves HTML, download links, structured JSON views and a small set of endpoints for starting and tracking runs.
+Important invariants: The dashboard stays lightweight, reuses the same execution path as the CLI and never hosts benchmark logic twice.
+How to debug: Start with `/health`, then inspect `/api/dashboard/run/current` and `/api/dashboard/summary`.
 """
 
 from __future__ import annotations
@@ -15,11 +15,12 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from llm_benchmark.dashboard.run_manager import DashboardRunManager
 from llm_benchmark.dashboard.service import DashboardFilters, DashboardService
 
 
-def create_dashboard_app(*, results_dir: Path, tests_dir: Path | None) -> FastAPI:
-    """Create the read-only dashboard application with HTML and JSON routes."""
+def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Path) -> FastAPI:
+    """Create the dashboard application with HTML views, JSON APIs and run controls."""
 
     app = FastAPI(
         title="LLM Benchmark Dashboard",
@@ -28,6 +29,7 @@ def create_dashboard_app(*, results_dir: Path, tests_dir: Path | None) -> FastAP
         redoc_url=None,
     )
     service = DashboardService(results_dir=results_dir, tests_dir=tests_dir)
+    run_manager = DashboardRunManager(config_path=config_path, tests_dir=tests_dir, results_dir=results_dir)
     package_root = Path(__file__).resolve().parent
     template_env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(package_root / "templates")),
@@ -44,7 +46,9 @@ def create_dashboard_app(*, results_dir: Path, tests_dir: Path | None) -> FastAP
 
     @app.get("/health")
     async def health() -> JSONResponse:
-        return JSONResponse(service.health())
+        payload = service.health()
+        payload["run_status"] = run_manager.current_payload().get("state", {}).get("status")
+        return JSONResponse(payload)
 
     @app.get("/dashboard")
     async def dashboard(
@@ -68,12 +72,35 @@ def create_dashboard_app(*, results_dir: Path, tests_dir: Path | None) -> FastAP
                 search=search,
             )
         )
+        run_payload = run_manager.current_payload(suite=suite)
+        context["run_payload"] = run_payload
+        context["run_state"] = run_payload["state"]
+        context["run_preflight"] = run_payload["preflight"]
+        context["run_history"] = run_payload["history"]
         template = template_env.get_template("dashboard.html")
         return HTMLResponse(template.render(request=request, **context))
 
     @app.get("/api/dashboard/summary")
     async def api_summary() -> JSONResponse:
         return JSONResponse(service.api_summary())
+
+    @app.get("/api/dashboard/run/current")
+    async def api_run_current(suite: str | None = Query(None)) -> JSONResponse:
+        return JSONResponse(run_manager.current_payload(suite=suite))
+
+    @app.get("/api/dashboard/run/history")
+    async def api_run_history() -> JSONResponse:
+        return JSONResponse(run_manager.history_payload())
+
+    @app.post("/api/dashboard/run/start")
+    async def api_run_start(suite: str | None = Query(None)) -> JSONResponse:
+        try:
+            payload = run_manager.start_run(suite=suite)
+            return JSONResponse(payload, status_code=202)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/dashboard/models")
     async def api_models() -> JSONResponse:
@@ -123,8 +150,16 @@ def create_dashboard_app(*, results_dir: Path, tests_dir: Path | None) -> FastAP
     return app
 
 
-def run_dashboard(*, results_dir: Path, tests_dir: Path | None, host: str, port: int, log_level: str) -> None:
+def run_dashboard(
+    *,
+    config_path: Path,
+    results_dir: Path,
+    tests_dir: Path,
+    host: str,
+    port: int,
+    log_level: str,
+) -> None:
     """Run the dashboard with Uvicorn in-process so the existing container can expose it directly."""
 
-    app = create_dashboard_app(results_dir=results_dir, tests_dir=tests_dir)
+    app = create_dashboard_app(config_path=config_path, results_dir=results_dir, tests_dir=tests_dir)
     uvicorn.run(app, host=host, port=port, log_level=log_level.lower())

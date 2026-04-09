@@ -7,7 +7,6 @@ How to debug: Run commands with `--debug` to enable verbose logging and inspect 
 
 from __future__ import annotations
 
-import asyncio
 import os
 from pathlib import Path
 from typing import Optional
@@ -18,8 +17,8 @@ from llm_benchmark import __version__
 from llm_benchmark.config.loader import filter_test_cases_by_suite, load_config, load_test_cases
 from llm_benchmark.logging_utils import configure_logging
 from llm_benchmark.reporting.builder import build_report_artifacts
-from llm_benchmark.reporting.exporters import load_results_from_jsonl, write_raw_results, write_report_artifacts
-from llm_benchmark.runner.orchestrator import BenchmarkOrchestrator
+from llm_benchmark.reporting.exporters import load_results_from_jsonl, write_report_artifacts
+from llm_benchmark.runner.execution import execute_benchmark_run
 
 app = typer.Typer(help="Benchmark multiple OpenAI-compatible LLM endpoints and export structured reports.")
 
@@ -188,24 +187,13 @@ def run_command(
     try:
         benchmark_config = load_config(_resolve_config_path(config))
         resolved_tests_dir = _resolve_tests_dir(tests_dir, benchmark_config.run_defaults.tests_dir)
-        selected_test_cases = filter_test_cases_by_suite(load_test_cases(resolved_tests_dir), suite)
-        orchestrator = BenchmarkOrchestrator(benchmark_config)
-        run_summary = asyncio.run(orchestrator.run(test_cases=selected_test_cases, suite=suite))
-
         resolved_results_dir = _resolve_results_dir(results_dir, benchmark_config.run_defaults.output_dir)
-        write_raw_results(run_summary.results, resolved_results_dir)
-        artifacts = build_report_artifacts(
-            results=run_summary.results,
-            benchmark_name=run_summary.benchmark_name,
-            benchmark_run_id=run_summary.benchmark_run_id,
-            suite=run_summary.suite,
-            run_started_at=run_summary.run_started_at,
-            run_finished_at=run_summary.run_finished_at,
-            environment_info=run_summary.environment_info,
-            config=benchmark_config,
-            test_cases=run_summary.selected_test_cases,
+        execution = execute_benchmark_run(
+            config_path=_resolve_config_path(config),
+            tests_dir=resolved_tests_dir,
+            results_dir=resolved_results_dir,
+            suite=suite,
         )
-        write_report_artifacts(artifacts, resolved_results_dir)
 
         typer.secho(
             f"Benchmark finished successfully. Artifacts written to {resolved_results_dir}",
@@ -260,10 +248,11 @@ def dashboard_command(
     port: int = typer.Option(8080, "--port", help="Dashboard bind port."),
     debug: bool = typer.Option(False, "--debug", help="Enable DEBUG logging."),
 ) -> None:
-    """Serve the integrated read-only benchmark dashboard."""
+    """Serve the integrated benchmark dashboard with live run controls."""
 
     configure_logging(os.getenv("LOG_LEVEL", "INFO"), debug=debug)
-    benchmark_config = load_config(_resolve_config_path(config)) if config else None
+    resolved_config_path = _resolve_config_path(config)
+    benchmark_config = load_config(resolved_config_path) if resolved_config_path.exists() else None
     resolved_tests_dir = _resolve_tests_dir(
         tests_dir,
         benchmark_config.run_defaults.tests_dir if benchmark_config else None,
@@ -277,6 +266,7 @@ def dashboard_command(
         from llm_benchmark.dashboard.app import run_dashboard
 
         run_dashboard(
+            config_path=resolved_config_path,
             results_dir=resolved_results_dir,
             tests_dir=resolved_tests_dir,
             host=host,

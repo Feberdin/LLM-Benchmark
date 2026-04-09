@@ -13,7 +13,7 @@ import traceback
 import uuid
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -26,6 +26,7 @@ from llm_benchmark.utils import build_environment_info, isoformat_utc, sha256_te
 from llm_benchmark.validation.service import ResponseValidator
 
 LOGGER = logging.getLogger(__name__)
+ProgressCallback = Callable[[dict[str, Any]], None]
 
 
 @dataclass(slots=True)
@@ -46,13 +47,14 @@ class BenchmarkRunSummary:
 class BenchmarkOrchestrator:
     """Run benchmark suites against all enabled models with bounded concurrency."""
 
-    def __init__(self, config: BenchmarkConfig) -> None:
+    def __init__(self, config: BenchmarkConfig, progress_callback: ProgressCallback | None = None) -> None:
         self.config = config
         self.validator = ResponseValidator()
         self.scorer = ScoreCalculator(
             default_weights=config.run_defaults.scoring_weights,
             latency_target_ms=config.run_defaults.latency_target_ms,
         )
+        self.progress_callback = progress_callback
 
     async def run(self, *, test_cases: list[TestCaseDefinition], suite: str | None) -> BenchmarkRunSummary:
         """Execute the selected suite and return normalized results."""
@@ -72,6 +74,15 @@ class BenchmarkOrchestrator:
             benchmark_run_id,
             len(enabled_models),
             len(test_cases),
+        )
+        self._emit_progress(
+            event="run_started",
+            stage="running",
+            benchmark_run_id=benchmark_run_id,
+            suite=suite or "all",
+            model_count=len(enabled_models),
+            test_case_count=len(test_cases),
+            total_planned_records=self._estimate_total_records(enabled_models, test_cases),
         )
 
         async with OpenAICompatibleClient(
@@ -103,6 +114,16 @@ class BenchmarkOrchestrator:
             benchmark_run_id,
             len(results),
         )
+        success_count = sum(1 for result in results if result.success and result.validation_passed)
+        failure_count = sum(1 for result in results if not result.success or not result.validation_passed)
+        self._emit_progress(
+            event="run_finished",
+            stage="running",
+            benchmark_run_id=benchmark_run_id,
+            total_records=len(results),
+            successful_records=success_count,
+            failed_records=failure_count,
+        )
 
         return BenchmarkRunSummary(
             benchmark_run_id=benchmark_run_id,
@@ -131,6 +152,16 @@ class BenchmarkOrchestrator:
         timeout_seconds = model_config.effective_timeout(self.config.run_defaults.default_timeout_seconds)
 
         for warmup_index in range(1, self.config.run_defaults.warmup_runs + 1):
+            self._emit_progress(
+                event="run_step_started",
+                stage="running",
+                model_id=model_config.id,
+                model_label=model_config.label,
+                test_case_id=test_case.test_case_id,
+                test_title=test_case.title,
+                phase="warmup",
+                repetition_index=warmup_index,
+            )
             warmup_result = await self._execute_single_run(
                 client=client,
                 semaphore=semaphore,
@@ -143,10 +174,21 @@ class BenchmarkOrchestrator:
             )
             if self.config.run_defaults.include_warmup_in_raw_outputs:
                 results.append(warmup_result)
+            self._emit_result_progress(warmup_result)
 
         measured_repetitions = test_case.effective_repetitions(self.config.run_defaults.default_repetitions)
         for repetition_index in range(1, measured_repetitions + 1):
             phase = "warm" if self.config.run_defaults.warmup_runs > 0 or repetition_index > 1 else "cold"
+            self._emit_progress(
+                event="run_step_started",
+                stage="running",
+                model_id=model_config.id,
+                model_label=model_config.label,
+                test_case_id=test_case.test_case_id,
+                test_title=test_case.title,
+                phase=phase,
+                repetition_index=repetition_index,
+            )
             measured_result = await self._execute_single_run(
                 client=client,
                 semaphore=semaphore,
@@ -158,6 +200,7 @@ class BenchmarkOrchestrator:
                 phase=phase,
             )
             results.append(measured_result)
+            self._emit_result_progress(measured_result)
 
         return results
 
@@ -383,3 +426,38 @@ class BenchmarkOrchestrator:
         if not output_tokens or duration_ms <= 0:
             return None
         return round(output_tokens / (duration_ms / 1000.0), 2)
+
+    def _emit_result_progress(self, result: RunResult) -> None:
+        self._emit_progress(
+            event="run_step_finished",
+            stage="running",
+            model_id=result.model_id,
+            model_label=result.model_label,
+            test_case_id=result.test_case_id,
+            category=result.category,
+            phase=result.metadata.get("phase", "measured"),
+            repetition_index=result.repetition_index,
+            success=result.success,
+            validation_passed=result.validation_passed,
+            duration_ms=result.duration_ms,
+            error_type=result.error_type,
+            error_message=result.error_message,
+            score_total=result.score_total,
+        )
+
+    def _estimate_total_records(
+        self,
+        enabled_models: list[Any],
+        test_cases: list[TestCaseDefinition],
+    ) -> int:
+        total = 0
+        for test_case in test_cases:
+            total += self.config.run_defaults.warmup_runs + test_case.effective_repetitions(
+                self.config.run_defaults.default_repetitions
+            )
+        return total * len(enabled_models)
+
+    def _emit_progress(self, **payload: Any) -> None:
+        if self.progress_callback is None:
+            return
+        self.progress_callback(payload)

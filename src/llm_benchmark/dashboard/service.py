@@ -34,6 +34,7 @@ REPORT_FILES = [
 
 VIEW_OPTIONS = [
     ("overview", "Overview"),
+    ("runs", "Runs"),
     ("models", "Models"),
     ("categories", "Categories"),
     ("tests", "Tests"),

@@ -20,11 +20,11 @@
         <div class="hero-meta">
           <div class="meta-card">
             <span>Run</span>
-            <strong>{{ overview.run_finished_at or "n/a" }}</strong>
+            <strong>{{ overview.run_finished_at or run_state.finished_at or "n/a" }}</strong>
           </div>
           <div class="meta-card">
             <span>Records</span>
-            <strong>{{ overview.measured_records or 0 }}</strong>
+            <strong>{{ overview.measured_records or run_state.completed_records or 0 }}</strong>
           </div>
           <div class="meta-card">
             <span>Stand</span>
@@ -39,6 +39,213 @@
         {% endfor %}
       </nav>
 
+      <section class="panel two-column run-layout">
+        <article class="panel-card">
+          <div class="row-head">
+            <div>
+              <span class="status-badge accent">Run Control</span>
+              <h2>Benchmark aus dem Webinterface starten</h2>
+            </div>
+            <span id="run-status-badge" class="status-badge {{ 'success' if run_state.status == 'succeeded' else 'danger' if run_state.status in ['failed', 'interrupted'] else 'warning' if run_state.status in ['queued', 'running'] else 'neutral' }}">
+              {{ run_state.status }}
+            </span>
+          </div>
+          <p class="muted">
+            Dieser Startpfad verwendet exakt dieselbe Benchmark-Engine wie die CLI. Anders als bei
+            <code>docker run --rm</code> bleibt Fortschritt, Fehlergrund und Historie im Dashboard sichtbar.
+          </p>
+
+          <form id="run-start-form" class="run-form">
+            <label>
+              <span>Suite</span>
+              <select id="run-suite-select" name="suite">
+                <option value="all">Alle Testsuiten</option>
+                {% for suite_name in run_preflight.available_suites %}
+                  <option
+                    value="{{ suite_name }}"
+                    {% if (run_state.suite == suite_name) or (filters.suite == suite_name) %}selected{% endif %}
+                  >
+                    {{ suite_name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </label>
+            <button
+              id="run-start-button"
+              type="submit"
+              class="primary-button"
+              {% if run_state.status in ["queued", "running"] or run_preflight.errors %}disabled{% endif %}
+            >
+              Benchmark starten
+            </button>
+          </form>
+
+          <div class="run-facts">
+            <div class="mini-card">
+              <span>Config</span>
+              <strong>{{ run_preflight.config_path }}</strong>
+            </div>
+            <div class="mini-card">
+              <span>Tests</span>
+              <strong>{{ run_preflight.selected_test_case_count }} / {{ run_preflight.discovered_test_case_count }}</strong>
+            </div>
+            <div class="mini-card">
+              <span>Modelle</span>
+              <strong>{{ run_preflight.enabled_models | length }}</strong>
+            </div>
+          </div>
+
+          <div id="run-form-message" class="inline-message hidden"></div>
+
+          {% if run_preflight.errors %}
+            <div class="alert danger-alert" id="preflight-errors">
+              <h3>Start aktuell blockiert</h3>
+              <ul class="signal-list compact">
+                {% for item in run_preflight.errors %}
+                  <li><p>{{ item }}</p></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          {% if run_preflight.warnings %}
+            <div class="alert warning-alert" id="preflight-warnings">
+              <h3>Vor dem naechsten Lauf beachten</h3>
+              <ul class="signal-list compact" id="preflight-warning-list">
+                {% for item in run_preflight.warnings %}
+                  <li><p>{{ item }}</p></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        </article>
+
+        <article class="panel-card">
+          <div class="row-head">
+            <div>
+              <span class="status-badge neutral">Live Status</span>
+              <h2 id="run-status-headline">
+                {% if run_state.status == "running" %}
+                  Benchmark laeuft gerade
+                {% elif run_state.status == "queued" %}
+                  Benchmark wartet auf Start
+                {% elif run_state.status == "failed" %}
+                  Letzter Lauf ist fehlgeschlagen
+                {% elif run_state.status == "interrupted" %}
+                  Vorheriger Lauf wurde unterbrochen
+                {% elif run_state.status == "succeeded" %}
+                  Letzter Lauf erfolgreich abgeschlossen
+                {% else %}
+                  Noch kein Dashboard-Run gestartet
+                {% endif %}
+              </h2>
+            </div>
+            <p class="muted" id="run-benchmark-id">{{ run_state.benchmark_run_id or "kein Benchmark-Run-ID vorhanden" }}</p>
+          </div>
+
+          <p id="run-step-copy">{{ run_state.current_step or "Das Dashboard ist bereit. Du kannst den ersten Lauf direkt hier starten." }}</p>
+          <div class="progress-shell">
+            {% set progress_width = ((run_state.completed_records / run_state.total_planned_records) * 100) if run_state.total_planned_records else 0 %}
+            <div class="progress-track">
+              <div id="run-progress-bar" class="progress-bar" style="width: {{ progress_width }}%;"></div>
+            </div>
+            <div class="metric-row compact">
+              <span id="run-progress-text">{{ run_state.completed_records }} / {{ run_state.total_planned_records or 0 }} Schritte</span>
+              <span id="run-success-text">{{ run_state.successful_records }} erfolgreich</span>
+              <span id="run-failure-text">{{ run_state.failed_records }} problematisch</span>
+            </div>
+          </div>
+
+          <div class="run-meta-grid">
+            <div class="meta-card">
+              <span>Start</span>
+              <strong id="run-started-at">{{ run_state.started_at or "n/a" }}</strong>
+            </div>
+            <div class="meta-card">
+              <span>Ende</span>
+              <strong id="run-finished-at">{{ run_state.finished_at or "n/a" }}</strong>
+            </div>
+            <div class="meta-card">
+              <span>Suite</span>
+              <strong id="run-suite-label">{{ run_state.suite or "all" }}</strong>
+            </div>
+          </div>
+
+          <div id="run-latest-error" class="alert danger-alert {% if not run_state.latest_error %}hidden{% endif %}">
+            <h3>Letzter Fehler</h3>
+            <p>{{ run_state.latest_error or "" }}</p>
+          </div>
+
+          <div class="alert subtle-alert">
+            <h3>Warum gestern "nichts passiert" sein kann</h3>
+            <ul class="signal-list compact">
+              <li><p><code>docker run --rm</code> loescht den Container sofort nach Ende, daher bleibt nichts zum Nachsehen uebrig.</p></li>
+              <li><p>Ein leeres Unraid-Mount auf <code>/app/tests</code> ueberdeckt die mitgelieferten Beispieltests im Image.</p></li>
+              <li><p>Ollama kann waehrend des Modell-Downloads sehr lange beschaeftigt sein, bevor ueberhaupt Benchmark-Requests ankommen.</p></li>
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel two-column run-layout">
+        <article class="panel-card">
+          <div class="row-head">
+            <div>
+              <span class="status-badge neutral">Timeline</span>
+              <h2>Einzelschritte des letzten Dashboard-Runs</h2>
+            </div>
+            <span class="muted">Live aktualisiert</span>
+          </div>
+          <ul id="run-timeline" class="signal-list timeline-list">
+            {% for event in run_state.events %}
+              <li>
+                <span class="status-badge {{ 'success' if event.level == 'success' else 'danger' if event.level == 'error' else 'warning' if event.level == 'warning' else 'neutral' }}">
+                  {{ event.stage }}
+                </span>
+                <p><strong>{{ event.timestamp }}</strong> {{ event.summary }}</p>
+              </li>
+            {% else %}
+              <li><p>Noch keine Timeline vorhanden. Starte den ersten Benchmark direkt oben im Dashboard.</p></li>
+            {% endfor %}
+          </ul>
+        </article>
+
+        <article class="panel-card">
+          <div class="row-head">
+            <div>
+              <span class="status-badge neutral">Historie</span>
+              <h2>Zuletzt gestartete Dashboard-Runs</h2>
+            </div>
+          </div>
+          <div id="run-history">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Suite</th>
+                  <th>Start</th>
+                  <th>Ende</th>
+                  <th>Resultat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in run_history %}
+                  <tr>
+                    <td>{{ row.status }}</td>
+                    <td>{{ row.suite }}</td>
+                    <td>{{ row.started_at }}</td>
+                    <td>{{ row.finished_at or "n/a" }}</td>
+                    <td>{{ row.successful_records }} ok / {{ row.failed_records }} fail</td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="5">Noch keine Historie vorhanden.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
       <section class="filters-panel">
         <form method="get" action="/dashboard" class="filters-grid">
           <input type="hidden" name="view" value="{{ filters.view }}" />
@@ -46,8 +253,8 @@
             <span>Suite</span>
             <select name="suite">
               <option value="all">Alle</option>
-              {% for suite in filter_options.suites %}
-                <option value="{{ suite }}" {% if filters.suite == suite %}selected{% endif %}>{{ suite }}</option>
+              {% for suite_name in filter_options.suites %}
+                <option value="{{ suite_name }}" {% if filters.suite == suite_name %}selected{% endif %}>{{ suite_name }}</option>
               {% endfor %}
             </select>
           </label>
@@ -64,8 +271,8 @@
             <span>Kategorie</span>
             <select name="category">
               <option value="all">Alle</option>
-              {% for category in filter_options.categories %}
-                <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>{{ category }}</option>
+              {% for category_name in filter_options.categories %}
+                <option value="{{ category_name }}" {% if filters.category == category_name %}selected{% endif %}>{{ category_name }}</option>
               {% endfor %}
             </select>
           </label>
@@ -94,10 +301,10 @@
         </form>
       </section>
 
-      {% if not overview.has_results %}
+      {% if not overview.has_results and filters.view != "runs" %}
         <section class="empty-state">
           <h2>Noch keine Ergebnisse</h2>
-          <p>Fuehre zuerst einen Benchmark-Lauf aus oder lege vorhandene Report-Dateien unter <code>/app/results</code> ab.</p>
+          <p>Starte oben den ersten Benchmarklauf oder lege vorhandene Report-Dateien unter <code>/app/results</code> ab.</p>
         </section>
       {% else %}
         {% if filters.view == "overview" %}
@@ -188,6 +395,31 @@
                   </a>
                 {% endfor %}
               </div>
+            </div>
+          </section>
+        {% elif filters.view == "runs" %}
+          <section class="panel two-column">
+            <div class="panel-card">
+              <h2>Aktueller Lauf</h2>
+              <table>
+                <tbody>
+                  <tr><td>Status</td><td id="runs-view-status">{{ run_state.status }}</td></tr>
+                  <tr><td>Suite</td><td id="runs-view-suite">{{ run_state.suite or "all" }}</td></tr>
+                  <tr><td>Benchmark Run ID</td><td id="runs-view-id">{{ run_state.benchmark_run_id or "n/a" }}</td></tr>
+                  <tr><td>Geplante Schritte</td><td id="runs-view-planned">{{ run_state.total_planned_records }}</td></tr>
+                  <tr><td>Abgeschlossen</td><td id="runs-view-completed">{{ run_state.completed_records }}</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="panel-card">
+              <h2>Erzeugte Dateien</h2>
+              <ul class="signal-list compact" id="generated-file-list">
+                {% for item in run_state.generated_files %}
+                  <li><p>{{ item }}</p></li>
+                {% else %}
+                  <li><p>Nach einem erfolgreichen Lauf erscheinen hier die frisch erzeugten Artefakte.</p></li>
+                {% endfor %}
+              </ul>
             </div>
           </section>
         {% elif filters.view == "models" %}
@@ -401,5 +633,207 @@
         {% endif %}
       {% endif %}
     </div>
+
+    <script>
+      const initialRunPayload = {{ run_payload | tojson }};
+      let lastKnownStatus = initialRunPayload.state.status;
+
+      function badgeClassFromStatus(status) {
+        if (status === "succeeded") return "success";
+        if (status === "failed" || status === "interrupted") return "danger";
+        if (status === "running" || status === "queued") return "warning";
+        return "neutral";
+      }
+
+      function setText(id, value) {
+        const node = document.getElementById(id);
+        if (node) {
+          node.textContent = value ?? "n/a";
+        }
+      }
+
+      function renderTimeline(events) {
+        const node = document.getElementById("run-timeline");
+        if (!node) return;
+        if (!events || events.length === 0) {
+          node.innerHTML = "<li><p>Noch keine Timeline vorhanden. Starte den ersten Benchmark direkt oben im Dashboard.</p></li>";
+          return;
+        }
+        node.innerHTML = events.slice(0, 20).map((event) => {
+          const badge = badgeClassFromStatus(event.level === "error" ? "failed" : event.level === "success" ? "succeeded" : event.level === "warning" ? "running" : "idle");
+          return `
+            <li>
+              <span class="status-badge ${badge}">${event.stage}</span>
+              <p><strong>${event.timestamp}</strong> ${event.summary}</p>
+            </li>
+          `;
+        }).join("");
+      }
+
+      function renderHistory(history) {
+        const wrapper = document.getElementById("run-history");
+        if (!wrapper) return;
+        if (!history || history.length === 0) {
+          wrapper.innerHTML = "<table><tbody><tr><td>Noch keine Historie vorhanden.</td></tr></tbody></table>";
+          return;
+        }
+        const rows = history.slice(0, 10).map((row) => `
+          <tr>
+            <td>${row.status}</td>
+            <td>${row.suite}</td>
+            <td>${row.started_at ?? "n/a"}</td>
+            <td>${row.finished_at ?? "n/a"}</td>
+            <td>${row.successful_records} ok / ${row.failed_records} fail</td>
+          </tr>
+        `).join("");
+        wrapper.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Suite</th>
+                <th>Start</th>
+                <th>Ende</th>
+                <th>Resultat</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      }
+
+      function renderGeneratedFiles(files) {
+        const node = document.getElementById("generated-file-list");
+        if (!node) return;
+        if (!files || files.length === 0) {
+          node.innerHTML = "<li><p>Nach einem erfolgreichen Lauf erscheinen hier die frisch erzeugten Artefakte.</p></li>";
+          return;
+        }
+        node.innerHTML = files.map((item) => `<li><p>${item}</p></li>`).join("");
+      }
+
+      function renderWarnings(warnings) {
+        const node = document.getElementById("preflight-warning-list");
+        if (!node) return;
+        node.innerHTML = (warnings || []).map((item) => `<li><p>${item}</p></li>`).join("");
+      }
+
+      function renderRunPayload(payload) {
+        const state = payload.state;
+        const preflight = payload.preflight;
+
+        const statusBadge = document.getElementById("run-status-badge");
+        if (statusBadge) {
+          statusBadge.textContent = state.status;
+          statusBadge.className = `status-badge ${badgeClassFromStatus(state.status)}`;
+        }
+
+        const headline = document.getElementById("run-status-headline");
+        if (headline) {
+          headline.textContent =
+            state.status === "running" ? "Benchmark laeuft gerade" :
+            state.status === "queued" ? "Benchmark wartet auf Start" :
+            state.status === "failed" ? "Letzter Lauf ist fehlgeschlagen" :
+            state.status === "interrupted" ? "Vorheriger Lauf wurde unterbrochen" :
+            state.status === "succeeded" ? "Letzter Lauf erfolgreich abgeschlossen" :
+            "Noch kein Dashboard-Run gestartet";
+        }
+
+        setText("run-benchmark-id", state.benchmark_run_id || "kein Benchmark-Run-ID vorhanden");
+        setText("run-step-copy", state.current_step || "Das Dashboard ist bereit. Du kannst den ersten Lauf direkt hier starten.");
+        setText("run-progress-text", `${state.completed_records} / ${state.total_planned_records || 0} Schritte`);
+        setText("run-success-text", `${state.successful_records} erfolgreich`);
+        setText("run-failure-text", `${state.failed_records} problematisch`);
+        setText("run-started-at", state.started_at || "n/a");
+        setText("run-finished-at", state.finished_at || "n/a");
+        setText("run-suite-label", state.suite || "all");
+        setText("runs-view-status", state.status);
+        setText("runs-view-suite", state.suite || "all");
+        setText("runs-view-id", state.benchmark_run_id || "n/a");
+        setText("runs-view-planned", String(state.total_planned_records || 0));
+        setText("runs-view-completed", String(state.completed_records || 0));
+
+        const progressBar = document.getElementById("run-progress-bar");
+        if (progressBar) {
+          const width = state.total_planned_records ? Math.min(100, (state.completed_records / state.total_planned_records) * 100) : 0;
+          progressBar.style.width = `${width}%`;
+        }
+
+        const latestError = document.getElementById("run-latest-error");
+        if (latestError) {
+          if (state.latest_error) {
+            latestError.classList.remove("hidden");
+            latestError.querySelector("p").textContent = state.latest_error;
+          } else {
+            latestError.classList.add("hidden");
+          }
+        }
+
+        const startButton = document.getElementById("run-start-button");
+        if (startButton) {
+          startButton.disabled = ["queued", "running"].includes(state.status) || (preflight.errors || []).length > 0;
+        }
+
+        renderTimeline(state.events || []);
+        renderHistory(payload.history || []);
+        renderGeneratedFiles(state.generated_files || []);
+        renderWarnings(preflight.warnings || []);
+      }
+
+      async function pollRunState() {
+        try {
+          const suite = document.getElementById("run-suite-select")?.value || "";
+          const response = await fetch(`/api/dashboard/run/current?suite=${encodeURIComponent(suite)}`, { cache: "no-store" });
+          if (!response.ok) return;
+          const payload = await response.json();
+          renderRunPayload(payload);
+          if (["running", "queued"].includes(lastKnownStatus) && ["succeeded", "failed"].includes(payload.state.status)) {
+            window.location.reload();
+            return;
+          }
+          lastKnownStatus = payload.state.status;
+        } catch (error) {
+          console.error("Could not poll dashboard run state", error);
+        }
+      }
+
+      document.getElementById("run-start-form")?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const suite = document.getElementById("run-suite-select")?.value || "all";
+        const message = document.getElementById("run-form-message");
+        if (message) {
+          message.classList.add("hidden");
+          message.textContent = "";
+        }
+
+        try {
+          const response = await fetch(`/api/dashboard/run/start?suite=${encodeURIComponent(suite)}`, {
+            method: "POST",
+          });
+          const payload = await response.json();
+          if (!response.ok) {
+            if (message) {
+              message.textContent = payload.detail || "Benchmark konnte nicht gestartet werden.";
+              message.className = "inline-message danger-text";
+            }
+            return;
+          }
+          lastKnownStatus = payload.status || "queued";
+          if (message) {
+            message.textContent = "Benchmark wurde gestartet. Fortschritt wird jetzt live aktualisiert.";
+            message.className = "inline-message success-text";
+          }
+          await pollRunState();
+        } catch (error) {
+          if (message) {
+            message.textContent = `Benchmark konnte nicht gestartet werden: ${error}`;
+            message.className = "inline-message danger-text";
+          }
+        }
+      });
+
+      renderRunPayload(initialRunPayload);
+      window.setInterval(pollRunState, 2500);
+    </script>
   </body>
 </html>

@@ -55,7 +55,7 @@ models:
     provider: "local"
     api_type: "openai_compatible"
     base_url: "${MISTRAL_BASE_URL:-http://192.168.178.10:11434/v1}"
-    model_name: "${MISTRAL_MODEL_NAME:-mistral-small-3.2}"
+    model_name: "${MISTRAL_MODEL_NAME:-mistral-small3.2}"
     enabled: true
     default_parameters:
       temperature: 0.0
@@ -72,7 +72,7 @@ models:
     provider: "local"
     api_type: "openai_compatible"
     base_url: "${QWEN_BASE_URL:-http://192.168.178.10:11434/v1}"
-    model_name: "${QWEN_MODEL_NAME:-qwen3.5-35b-a3b}"
+    model_name: "${QWEN_MODEL_NAME:-qwen3.5:35b-a3b}"
     enabled: true
     default_parameters:
       temperature: 0.0
