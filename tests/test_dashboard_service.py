@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import orjson
+
 from llm_benchmark.config.models import BenchmarkConfig
 from llm_benchmark.domain.result import RunResult, ScoreBreakdown
 from llm_benchmark.domain.test_case import TestCaseDefinition
@@ -126,3 +128,93 @@ def test_dashboard_service_builds_context_from_artifacts(tmp_path: Path) -> None
     assert context["overview"]["repo_cards"][0]["has_data"] is False
     assert "No measured runs are available yet" in context["overview"]["repo_cards"][0]["summary"]
     assert service.health()["status"] == "ok"
+
+
+def test_dashboard_service_uses_historical_repo_recommendations(tmp_path: Path) -> None:
+    config = BenchmarkConfig.model_validate(
+        {
+            "models": [
+                {
+                    "id": "openai-reference",
+                    "label": "OpenAI Reference",
+                    "provider": "openai",
+                    "base_url": "https://api.openai.com/v1",
+                    "model_name": "gpt-4.1-mini",
+                }
+            ]
+        }
+    )
+    test_case = TestCaseDefinition.model_validate(
+        {
+            "test_case_id": "quick-chat-triage",
+            "category": "chat",
+            "title": "Quick operational triage answer",
+            "description": "Short chat task.",
+            "prompt": "Rollback first.",
+            "tags": ["quick_compare", "chat"],
+            "suites": ["quick_compare"],
+        }
+    )
+    results = [_build_result()]
+    artifacts = build_report_artifacts(
+        results=results,
+        benchmark_name="dashboard-test",
+        benchmark_run_id="dash-run-1",
+        suite="quick_compare",
+        run_started_at="2026-04-08T10:00:00Z",
+        run_finished_at="2026-04-08T10:00:05Z",
+        environment_info={"python_version": "3.12.0"},
+        config=config,
+        test_cases=[test_case],
+    )
+
+    write_raw_results(results, tmp_path)
+    write_report_artifacts(artifacts, tmp_path)
+
+    history_dir = tmp_path / "history" / "secondbrain-run"
+    history_dir.mkdir(parents=True, exist_ok=True)
+    history_analysis = {
+        "benchmark_metadata": {
+            "benchmark_run_id": "secondbrain-run",
+            "suite": "secondbrain",
+            "run_finished_at": "2026-04-09T12:00:00Z",
+        },
+        "repo_recommendations": {
+            "secondbrain": {
+                "suite_name": "secondbrain",
+                "project_label": "SecondBrain",
+                "focus_areas": ["RAG / knowledge queries"],
+                "benchmark_fit_summary": "OpenAI Reference currently leads the SecondBrain suite.",
+                "best_model": {
+                    "model_id": "openai-reference",
+                    "model_label": "OpenAI Reference",
+                    "avg_total_score": 91.25,
+                },
+                "ranking": [
+                    {
+                        "rank": 1,
+                        "model_id": "openai-reference",
+                        "model_label": "OpenAI Reference",
+                        "avg_total_score": 91.25,
+                        "validation_pass_rate": 0.9,
+                        "success_rate": 1.0,
+                    }
+                ],
+                "project_strengths": [],
+                "project_weaknesses": [],
+                "notable_failures": [],
+            }
+        },
+        "best_model_for_secondbrain": {
+            "model_id": "openai-reference",
+            "model_label": "OpenAI Reference",
+            "avg_total_score": 91.25,
+        },
+    }
+    (history_dir / "analysis_input.json").write_bytes(orjson.dumps(history_analysis))
+
+    service = DashboardService(results_dir=tmp_path, tests_dir=FIXTURES_DIR / "tests")
+    context = service.build_dashboard_context(DashboardFilters(view="overview"))
+
+    assert context["overview"]["repo_cards"][0]["has_data"] is True
+    assert context["overview"]["repo_cards"][0]["payload"]["model_label"] == "OpenAI Reference"

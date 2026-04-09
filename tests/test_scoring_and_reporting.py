@@ -11,6 +11,7 @@ from llm_benchmark.config.models import BenchmarkConfig, ScoreWeights
 from llm_benchmark.domain.result import RunResult, ScoreBreakdown
 from llm_benchmark.domain.test_case import TestCaseDefinition
 from llm_benchmark.reporting.builder import build_report_artifacts
+from llm_benchmark.reporting.exporters import write_raw_results, write_report_artifacts
 from llm_benchmark.runner.scoring import ScoreCalculator
 
 
@@ -129,3 +130,50 @@ def test_report_builder_generates_expected_sections() -> None:
     assert "structured_output_summary" in artifacts.analysis_input
     assert "LLM Benchmark Report" in artifacts.markdown_report
     assert "<html" in artifacts.html_report.lower()
+
+
+def test_exporters_write_history_snapshots(tmp_path) -> None:
+    config = BenchmarkConfig.model_validate(
+        {
+            "models": [
+                {
+                    "id": "mistral-local",
+                    "label": "Mistral Small 3.2 (Local)",
+                    "provider": "ollama",
+                    "base_url": "http://ollama:11434/v1",
+                    "model_name": "mistral-small3.2",
+                }
+            ]
+        }
+    )
+    test_case = TestCaseDefinition.model_validate(
+        {
+            "test_case_id": "chat-cap-theorem",
+            "category": "chat",
+            "title": "Explain CAP theorem tradeoffs",
+            "description": "Simple report generation test case.",
+            "prompt": "Explain CAP theorem.",
+            "suites": ["core"],
+        }
+    )
+    results = [_build_result(repetition_index=1, text="CAP theorem balances consistency and availability.")]
+    artifacts = build_report_artifacts(
+        results=results,
+        benchmark_name="unit-test-benchmark",
+        benchmark_run_id="run-1",
+        suite="core",
+        run_started_at="2026-04-08T10:00:00Z",
+        run_finished_at="2026-04-08T10:00:05Z",
+        environment_info={"python_version": "3.12.0"},
+        config=config,
+        test_cases=[test_case],
+    )
+
+    write_raw_results(results, tmp_path)
+    write_report_artifacts(artifacts, tmp_path)
+
+    history_dir = tmp_path / "history" / "run-1"
+    assert (history_dir / "raw_runs.jsonl").exists()
+    assert (history_dir / "raw_runs.csv").exists()
+    assert (history_dir / "final_report.json").exists()
+    assert (history_dir / "analysis_input.json").exists()

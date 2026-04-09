@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+import copy
 
 import orjson
 import pandas as pd
@@ -18,7 +19,7 @@ import pandas as pd
 from llm_benchmark.config.loader import load_test_cases
 from llm_benchmark.domain.result import RunResult
 from llm_benchmark.domain.test_case import TestCaseDefinition
-from llm_benchmark.reporting.exporters import load_results_from_jsonl
+from llm_benchmark.reporting.exporters import HISTORY_DIR_NAME, load_results_from_jsonl
 from llm_benchmark.utils import isoformat_utc
 
 REPORT_FILES = [
@@ -162,6 +163,10 @@ class DashboardService:
 
         final_report = self._load_json(self.results_dir / "final_report.json")
         analysis_input = self._load_json(self.results_dir / "analysis_input.json")
+        analysis_input = self._merge_analysis_with_history(
+            analysis_input,
+            self._load_historical_repo_recommendations(),
+        )
         test_cases = self._load_test_cases()
         tests_lookup = self._build_tests_lookup(test_cases)
         results = self._load_results()
@@ -198,6 +203,7 @@ class DashboardService:
         for path in tracked_paths:
             signature.append(path.stat().st_mtime_ns if path.exists() else 0)
         signature.append(self._latest_tests_mtime())
+        signature.append(self._latest_history_mtime())
         return tuple(signature)
 
     def _latest_tests_mtime(self) -> int:
@@ -209,10 +215,107 @@ class DashboardService:
                 latest = max(latest, path.stat().st_mtime_ns)
         return latest
 
+    def _latest_history_mtime(self) -> int:
+        """Track historical snapshot changes so cached dashboard cards stay fresh."""
+
+        history_dir = self.results_dir / HISTORY_DIR_NAME
+        if not history_dir.exists():
+            return 0
+        latest = 0
+        for path in history_dir.rglob("analysis_input.json"):
+            if path.is_file():
+                latest = max(latest, path.stat().st_mtime_ns)
+        return latest
+
     def _load_json(self, path: Path) -> dict[str, Any]:
         if not path.exists():
             return {}
         return orjson.loads(path.read_bytes())
+
+    def _load_historical_repo_recommendations(self) -> dict[str, dict[str, Any]]:
+        """
+        Load the latest available repo-specific recommendation per project from historical snapshots.
+
+        Why this exists:
+        Operators often run `quick_compare` after a heavier repo suite. The latest top-level report then loses the
+        old repo recommendation even though that suite did finish earlier. Historical snapshots let the dashboard
+        keep showing the most recent valid suite-specific recommendation.
+        """
+
+        history_dir = self.results_dir / HISTORY_DIR_NAME
+        if not history_dir.exists():
+            return {}
+
+        latest_by_repo: dict[str, tuple[str, dict[str, Any]]] = {}
+        for analysis_path in history_dir.rglob("analysis_input.json"):
+            if not analysis_path.is_file():
+                continue
+            try:
+                analysis_input = orjson.loads(analysis_path.read_bytes())
+            except orjson.JSONDecodeError:
+                continue
+
+            benchmark_metadata = analysis_input.get("benchmark_metadata", {})
+            run_finished_at = str(
+                benchmark_metadata.get("run_finished_at")
+                or benchmark_metadata.get("generated_at")
+                or analysis_path.stat().st_mtime_ns
+            )
+            benchmark_run_id = benchmark_metadata.get("benchmark_run_id")
+            source_suite = benchmark_metadata.get("suite")
+            repo_recommendations = analysis_input.get("repo_recommendations", {})
+
+            for repo_key, recommendation in repo_recommendations.items():
+                if not isinstance(recommendation, dict):
+                    continue
+                if not recommendation.get("best_model"):
+                    continue
+
+                existing = latest_by_repo.get(repo_key)
+                if existing and existing[0] >= run_finished_at:
+                    continue
+
+                recommendation_copy = copy.deepcopy(recommendation)
+                recommendation_copy["source_benchmark_run_id"] = benchmark_run_id
+                recommendation_copy["source_suite"] = source_suite
+                recommendation_copy["source_run_finished_at"] = benchmark_metadata.get("run_finished_at")
+                recommendation_copy["source_is_historical"] = True
+                latest_by_repo[repo_key] = (run_finished_at, recommendation_copy)
+
+        return {repo_key: payload for repo_key, (_, payload) in latest_by_repo.items()}
+
+    def _merge_analysis_with_history(
+        self,
+        analysis_input: dict[str, Any],
+        historical_repo_recommendations: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Fill missing repo recommendations from the newest historical snapshots without mutating the stored file."""
+
+        if not analysis_input:
+            return analysis_input
+
+        merged = copy.deepcopy(analysis_input)
+        repo_recommendations = merged.setdefault("repo_recommendations", {})
+        field_mapping = {
+            "secondbrain": "best_model_for_secondbrain",
+            "voice_gateway": "best_model_for_voice_gateway",
+            "paperless_kiplus": "best_model_for_paperless_kiplus",
+        }
+
+        for repo_key, best_field in field_mapping.items():
+            current_recommendation = repo_recommendations.get(repo_key, {})
+            current_best_model = merged.get(best_field) or current_recommendation.get("best_model")
+            if current_best_model:
+                continue
+
+            fallback = historical_repo_recommendations.get(repo_key)
+            if not fallback:
+                continue
+
+            repo_recommendations[repo_key] = fallback
+            merged[best_field] = fallback.get("best_model")
+
+        return merged
 
     def _load_results(self) -> list[RunResult]:
         path = self.results_dir / "raw_runs.jsonl"

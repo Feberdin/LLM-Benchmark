@@ -16,6 +16,8 @@ from llm_benchmark.domain.result import RunResult
 from llm_benchmark.reporting.builder import ReportArtifacts
 from llm_benchmark.utils import ensure_directory, json_dump_to_path, json_dumps
 
+HISTORY_DIR_NAME = "history"
+
 
 def write_raw_results(results: list[RunResult], output_dir: Path) -> tuple[Path, Path]:
     """Write normalized raw runs to JSONL and CSV."""
@@ -31,6 +33,15 @@ def write_raw_results(results: list[RunResult], output_dir: Path) -> tuple[Path,
 
     frame = pd.DataFrame.from_records([_result_to_csv_record(result) for result in results])
     frame.to_csv(csv_path, index=False)
+
+    benchmark_run_id = _infer_benchmark_run_id_from_results(results)
+    if benchmark_run_id:
+        history_dir = _history_run_dir(output_dir, benchmark_run_id)
+        history_jsonl_path = history_dir / "raw_runs.jsonl"
+        history_csv_path = history_dir / "raw_runs.csv"
+        history_jsonl_path.write_bytes(jsonl_path.read_bytes())
+        history_csv_path.write_bytes(csv_path.read_bytes())
+
     return jsonl_path, csv_path
 
 
@@ -51,6 +62,16 @@ def write_report_artifacts(artifacts: ReportArtifacts, output_dir: Path) -> dict
     json_dump_to_path(analysis_input_json_path, artifacts.analysis_input, pretty=True)
     final_report_md_path.write_text(artifacts.markdown_report, encoding="utf-8")
     final_report_html_path.write_text(artifacts.html_report, encoding="utf-8")
+
+    benchmark_run_id = _infer_benchmark_run_id_from_artifacts(artifacts)
+    if benchmark_run_id:
+        history_dir = _history_run_dir(output_dir, benchmark_run_id)
+        (history_dir / "summary_by_model.csv").write_bytes(summary_by_model_path.read_bytes())
+        (history_dir / "summary_by_category.csv").write_bytes(summary_by_category_path.read_bytes())
+        (history_dir / "final_report.json").write_bytes(final_report_json_path.read_bytes())
+        (history_dir / "analysis_input.json").write_bytes(analysis_input_json_path.read_bytes())
+        (history_dir / "final_report.md").write_text(artifacts.markdown_report, encoding="utf-8")
+        (history_dir / "final_report.html").write_text(artifacts.html_report, encoding="utf-8")
 
     return {
         "summary_by_model_csv": summary_by_model_path,
@@ -88,3 +109,25 @@ def _stringify_json(value: Any) -> str | None:
     if isinstance(value, str):
         return value
     return json_dumps(value).decode("utf-8")
+
+
+def _history_run_dir(output_dir: Path, benchmark_run_id: str) -> Path:
+    """Return the history directory for one persisted benchmark run."""
+
+    return ensure_directory(output_dir / HISTORY_DIR_NAME / benchmark_run_id)
+
+
+def _infer_benchmark_run_id_from_results(results: list[RunResult]) -> str | None:
+    """Extract the run id from the first raw result when available."""
+
+    if not results:
+        return None
+    return results[0].benchmark_run_id
+
+
+def _infer_benchmark_run_id_from_artifacts(artifacts: ReportArtifacts) -> str | None:
+    """Extract the run id from the final report payload for history snapshots."""
+
+    benchmark_info = artifacts.final_report.get("benchmark_info", {})
+    benchmark_run_id = benchmark_info.get("benchmark_run_id")
+    return str(benchmark_run_id) if benchmark_run_id else None
