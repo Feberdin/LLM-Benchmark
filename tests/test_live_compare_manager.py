@@ -62,6 +62,8 @@ def test_live_compare_api_can_start_track_and_reload_history(tmp_path: Path, mon
                 "event": "compare_started",
                 "run_id": run_id,
                 "mode": request.mode,
+                "execution_mode": request.execution_mode,
+                "execution_order": request.models,
                 "model_ids": request.models,
             }
         )
@@ -79,7 +81,8 @@ def test_live_compare_api_can_start_track_and_reload_history(tmp_path: Path, mon
                     "provider": "local" if model_id != "openai_reference" else "openai",
                     "model_name": model_id,
                     "endpoint": "http://example.test/v1",
-                    "started_at": "2026-04-09T20:00:00Z",
+                    "execution_start_at": "2026-04-09T20:00:00Z",
+                    "queue_wait_ms": 0.0 if model_id == "mistral_local" else 1000.0,
                 }
             )
         results = [
@@ -89,14 +92,21 @@ def test_live_compare_api_can_start_track_and_reload_history(tmp_path: Path, mon
                 provider="local",
                 model_name="mistral-small3.2:latest",
                 endpoint="http://example.test/v1",
-                status="success",
+                status="finished",
                 success=True,
                 started_at="2026-04-09T20:00:00Z",
                 finished_at="2026-04-09T20:00:10Z",
                 duration_ms=10000.0,
                 duration_human="10.00 s",
+                queue_wait_ms=0.0,
+                execution_start_at="2026-04-09T20:00:00Z",
+                execution_end_at="2026-04-09T20:00:10Z",
+                isolated_duration_ms=10000.0,
+                total_elapsed_since_run_start_ms=10000.0,
+                total_elapsed_human="10.00 s",
                 response_text="Mistral answer",
                 http_status=200,
+                quick_badges=["Erfolgreich", "Laengste Antwort"],
             ),
             LiveCompareModelResult(
                 model_id="qwen_local",
@@ -104,14 +114,21 @@ def test_live_compare_api_can_start_track_and_reload_history(tmp_path: Path, mon
                 provider="local",
                 model_name="qwen3.5:35b-a3b",
                 endpoint="http://example.test/v1",
-                status="success",
+                status="finished",
                 success=True,
                 started_at="2026-04-09T20:00:00Z",
                 finished_at="2026-04-09T20:00:08Z",
                 duration_ms=8000.0,
                 duration_human="8.00 s",
+                queue_wait_ms=10000.0,
+                execution_start_at="2026-04-09T20:00:10Z",
+                execution_end_at="2026-04-09T20:00:18Z",
+                isolated_duration_ms=8000.0,
+                total_elapsed_since_run_start_ms=18000.0,
+                total_elapsed_human="18.00 s",
                 response_text="Qwen answer",
                 http_status=200,
+                quick_badges=["Erfolgreich"],
             ),
             LiveCompareModelResult(
                 model_id="openai_reference",
@@ -119,14 +136,21 @@ def test_live_compare_api_can_start_track_and_reload_history(tmp_path: Path, mon
                 provider="openai",
                 model_name="gpt-4.1-mini",
                 endpoint="https://api.openai.com/v1",
-                status="success",
+                status="finished",
                 success=True,
                 started_at="2026-04-09T20:00:00Z",
                 finished_at="2026-04-09T20:00:02Z",
                 duration_ms=2000.0,
                 duration_human="2.00 s",
+                queue_wait_ms=18000.0,
+                execution_start_at="2026-04-09T20:00:18Z",
+                execution_end_at="2026-04-09T20:00:20Z",
+                isolated_duration_ms=2000.0,
+                total_elapsed_since_run_start_ms=20000.0,
+                total_elapsed_human="20.00 s",
                 response_text="OpenAI answer",
                 http_status=200,
+                quick_badges=["Erfolgreich", "Schnellstes Modell"],
             ),
         ]
         for result in results:
@@ -145,8 +169,13 @@ def test_live_compare_api_can_start_track_and_reload_history(tmp_path: Path, mon
                 "summary": {
                     "fastest_model_id": "openai_reference",
                     "fastest_model_label": "OpenAI Reference",
+                    "shortest_response_model_id": "qwen_local",
+                    "shortest_response_model_label": "Qwen Local",
                     "longest_response_model_id": "mistral_local",
                     "longest_response_model_label": "Mistral Local",
+                    "execution_mode": "serial",
+                    "execution_order": ["mistral_local", "qwen_local", "openai_reference"],
+                    "advisory": "Serial compare.",
                     "all_successful": True,
                     "successful_model_count": 3,
                     "failed_model_count": 0,
@@ -161,16 +190,24 @@ def test_live_compare_api_can_start_track_and_reload_history(tmp_path: Path, mon
             question=request.question,
             system_prompt=request.system_prompt,
             mode=request.mode,
+            execution_mode=request.execution_mode,
+            execution_order=request.models,
             selected_models=request.models,
             max_tokens=request.max_tokens,
             temperature=request.temperature,
             top_p=request.top_p,
+            manual_note=request.manual_note,
             results=results,
             summary=LiveCompareSummary(
                 fastest_model_id="openai_reference",
                 fastest_model_label="OpenAI Reference",
+                shortest_response_model_id="qwen_local",
+                shortest_response_model_label="Qwen Local",
                 longest_response_model_id="mistral_local",
                 longest_response_model_label="Mistral Local",
+                execution_mode="serial",
+                execution_order=["mistral_local", "qwen_local", "openai_reference"],
+                advisory="Serial compare.",
                 all_successful=True,
                 successful_model_count=3,
                 failed_model_count=0,
@@ -188,6 +225,7 @@ def test_live_compare_api_can_start_track_and_reload_history(tmp_path: Path, mon
         page = client.get("/live-compare")
         assert page.status_code == 200
         assert "Live Compare" in page.text
+        assert "Faktenfrage mit Unsicherheitsdisziplin" in page.text
 
         start_response = client.post(
             "/api/dashboard/live-compare",
@@ -195,9 +233,11 @@ def test_live_compare_api_can_start_track_and_reload_history(tmp_path: Path, mon
                 "question": "Vergleiche diese Antwort bitte kurz.",
                 "models": ["mistral_local", "qwen_local", "openai_reference"],
                 "mode": "chat",
+                "execution_mode": "serial",
                 "max_tokens": 300,
                 "temperature": 0.0,
                 "top_p": 1.0,
+                "manual_note": "Mistral war hier etwas klarer.",
             },
         )
         assert start_response.status_code == 202
@@ -215,15 +255,20 @@ def test_live_compare_api_can_start_track_and_reload_history(tmp_path: Path, mon
         assert current_payload is not None
         assert current_payload["status"] == "succeeded"
         assert current_payload["summary"]["fastest_model_id"] == "openai_reference"
+        assert current_payload["execution_mode"] == "serial"
+        assert current_payload["manual_note"] == "Mistral war hier etwas klarer."
         assert len(current_payload["results"]) == 3
 
         history_response = client.get("/api/dashboard/live-compare/history")
         assert history_response.status_code == 200
         history_payload = history_response.json()
         assert history_payload[0]["run_id"] == current_payload["run_id"]
+        assert history_payload[0]["execution_mode"] == "serial"
+        assert history_payload[0]["per_model_durations"][0]["isolated_duration_ms"] == 10000.0
 
         run_response = client.get(f"/api/dashboard/live-compare/{current_payload['run_id']}")
         assert run_response.status_code == 200
         run_payload = run_response.json()
         assert run_payload["question"] == "Vergleiche diese Antwort bitte kurz."
         assert run_payload["results"][1]["model_id"] == "qwen_local"
+        assert run_payload["execution_order"] == ["mistral_local", "qwen_local", "openai_reference"]

@@ -1,0 +1,121 @@
+presets:
+  - preset_id: "facts_uncertainty_discipline"
+    title: "Faktenfrage mit Unsicherheitsdisziplin"
+    goal: "Prueft, welches Modell bei einfachen Wissensfragen sauber zwischen Wissen und Unsicherheit trennt."
+    mode: "chat"
+    prompt: |
+      Was weißt du über Menslage? Antworte nur mit gesicherten Informationen. Wenn du dir bei einzelnen Details nicht sicher bist, kennzeichne die Unsicherheit klar und erfinde nichts.
+  - preset_id: "docker_error_analysis"
+    title: "Docker-Fehleranalyse"
+    goal: "Praxisnaher Infrastruktur- und Docker-Support-Fall."
+    mode: "technical"
+    prompt: |
+      Analysiere diesen Docker-Fehler und nenne die wahrscheinlichste Ursache sowie die nächsten 3 sinnvollen Prüfschritte:
+      "docker: Error response from daemon: Head https://ghcr.io/v2/feberdin/llm-benchmark/manifests/latest: denied"
+  - preset_id: "ollama_cpu_troubleshooting"
+    title: "Ollama Troubleshooting"
+    goal: "Prueft, welches Modell technische Probleme strukturiert und hilfreich analysiert."
+    mode: "technical"
+    prompt: |
+      Ein lokales Modell über Ollama antwortet extrem langsam oder gar nicht. Nenne die wahrscheinlichsten Ursachen auf einem CPU-only-Server und strukturiere die Antwort in:
+      Ursache
+      Warum plausibel
+      Prüfbefehl
+      Konkrete Maßnahme
+  - preset_id: "paperless_document_classification"
+    title: "Paperless Dokumentklassifikation"
+    goal: "Misst JSON-Treue und Klassifikationsqualität für Paperless-nahe Workflows."
+    mode: "json"
+    prompt: |
+      Extrahiere aus folgendem Dokumenttext als JSON:
+      document_type
+      correspondent
+      storage_path
+      tags
+      document_date
+      ai_note
+
+      Dokumenttext:
+      "Rechnung Stadtwerke Osnabrück, Kundennummer 1234567, Abschlag Strom für März 2026, Rechnungsdatum 03.03.2026, Betrag 128,44 EUR"
+  - preset_id: "tax_enrichment_cautious"
+    title: "Steuerliche Einordnung vorsichtig"
+    goal: "Prueft, welches Modell steuerliche Einordnung konservativ und strukturiert macht."
+    mode: "json"
+    prompt: |
+      Ordne dieses Dokument vorsichtig steuerlich ein. Gib nur JSON aus mit:
+      tax_year
+      document_date
+      issuer
+      total_amount
+      tax_category
+      tax_subcategory
+      wiso_target_area
+      classification_confidence
+      eligibility_confidence
+      flags
+      reasoning_summary
+
+      Dokument:
+      "Rechnung Kindertagesstätte Sonnenschein, Betreuungsgebühr Februar 2026, Kind: Max Mustermann, Rechnungsbetrag 245,00 EUR, bezahlt per Überweisung."
+  - preset_id: "home_assistant_voice_status"
+    title: "Home Assistant Statusinterpretation"
+    goal: "Misst Voice- und Home-Assistant-Relevanz, Kürze und natürliche Sprache."
+    mode: "chat"
+    prompt: |
+      Interpretiere diese Home-Assistant-Daten kurz und sachlich:
+      hausbatterie_soc = 78
+      solar_leistung = 4200 W
+      hausverbrauch = 1100 W
+      wallbox_status = aus
+      Formuliere daraus eine Antwort, die ich direkt in einer Sprachoberfläche verwenden könnte.
+  - preset_id: "whatsapp_context_extraction"
+    title: "WhatsApp Gesprächsauswertung"
+    goal: "Prueft SecondBrain-nahe Kommunikationsauswertung mit strukturierter Extraktion."
+    mode: "json"
+    prompt: |
+      Analysiere den folgenden Chat und extrahiere:
+      beteiligte_personen
+      verabredungen
+      offene_punkte
+      zeitangaben
+
+      Chat:
+      "Joachim: Können wir Freitag um 18 Uhr wegen der Solaranlage sprechen?
+      Peter: Ja, passt.
+      Joachim: Bring bitte auch das Angebot mit.
+      Peter: Mache ich."
+  - preset_id: "yaml_configuration_robust"
+    title: "YAML Konfiguration robust"
+    goal: "Prueft Strukturausgabe, Syntaxdisziplin und Konfigurationsfähigkeit."
+    mode: "technical"
+    prompt: |
+      Erzeuge eine vollständige produktive YAML-Konfiguration für eine Paperless-KIplus-ähnliche Integration.
+      Anforderungen:
+
+      * nur gültiges YAML
+      * process_only_tag: "#NEU"
+      * dry_run: false
+      * enable_parallel_ai: true
+      * max_parallel_ai_jobs: 3
+      * quarantine_failed_documents: true
+      * already_classified_skip: true
+      * sinnvolle konservative Defaults
+      * keine Erklärungen außerhalb des YAML
+  - preset_id: "python_coding_test"
+    title: "Python Coding Test"
+    goal: "Misst Coding-Tauglichkeit für spätere lokale Coding-Endpunkte."
+    mode: "technical"
+    prompt: |
+      Schreibe eine Python-Funktion, die eine Liste von Benchmark-Ergebnissen entgegennimmt und das schnellste erfolgreiche Modell zurückgibt. Berücksichtige Fehlerfälle sauber und liefere zusätzlich einen kleinen pytest-Test.
+  - preset_id: "log_analysis_with_actions"
+    title: "Loganalyse mit Ursache und Maßnahmen"
+    goal: "Prüft strukturierte Fehleranalyse aus realen Projektsituationen."
+    mode: "technical"
+    prompt: |
+      Analysiere dieses Log und gib aus:
+      wahrscheinlichste Ursache
+      alternative Ursachen
+      konkrete nächste Prüfschritte
+
+      Log:
+      "FileNotFoundError: [Errno 2] No such file or directory: /config/config.unraid.example.yaml"

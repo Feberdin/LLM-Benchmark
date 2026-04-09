@@ -12,8 +12,22 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 CompareMode = Literal["chat", "json", "technical", "summarization"]
-CompareResultStatus = Literal["waiting", "running", "success", "failed"]
+CompareExecutionMode = Literal["serial", "parallel"]
+CompareResultStatus = Literal["waiting", "running", "finished", "failed"]
 CompareRunStatus = Literal["idle", "queued", "running", "succeeded", "partial", "failed", "interrupted"]
+
+
+class LiveComparePreset(BaseModel):
+    """One reusable live compare prompt preset shown directly in the dashboard UI."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    preset_id: str = Field(min_length=2, max_length=100)
+    title: str = Field(min_length=3, max_length=200)
+    goal: str = Field(min_length=10, max_length=500)
+    prompt: str = Field(min_length=1, max_length=32000)
+    system_prompt: str | None = Field(default=None, max_length=16000)
+    mode: CompareMode = "chat"
 
 
 class LiveCompareRequest(BaseModel):
@@ -25,9 +39,11 @@ class LiveCompareRequest(BaseModel):
     system_prompt: str | None = Field(default=None, max_length=16000)
     models: list[str] = Field(default_factory=list, min_length=2, max_length=4)
     mode: CompareMode = "chat"
+    execution_mode: CompareExecutionMode = "serial"
     max_tokens: int = Field(default=600, ge=16, le=32000)
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
     top_p: float = Field(default=1.0, ge=0.0, le=1.0)
+    manual_note: str | None = Field(default=None, max_length=2000)
 
     @field_validator("question")
     @classmethod
@@ -40,6 +56,14 @@ class LiveCompareRequest(BaseModel):
     @field_validator("system_prompt")
     @classmethod
     def normalize_system_prompt(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+    @field_validator("manual_note")
+    @classmethod
+    def normalize_manual_note(cls, value: str | None) -> str | None:
         if value is None:
             return None
         cleaned = value.strip()
@@ -70,6 +94,12 @@ class LiveCompareModelResult(BaseModel):
     finished_at: str | None = None
     duration_ms: float | None = None
     duration_human: str | None = None
+    queue_wait_ms: float | None = None
+    execution_start_at: str | None = None
+    execution_end_at: str | None = None
+    isolated_duration_ms: float | None = None
+    total_elapsed_since_run_start_ms: float | None = None
+    total_elapsed_human: str | None = None
     ttft_ms: float | None = None
     tokens_per_second: float | None = None
     input_tokens: int | None = None
@@ -82,6 +112,9 @@ class LiveCompareModelResult(BaseModel):
     finish_reason: str | None = None
     error_type: str | None = None
     error_message: str | None = None
+    quick_badges: list[str] = Field(default_factory=list)
+    detected_content_types: list[str] = Field(default_factory=list)
+    uncertainty_marked: bool | None = None
     technical_details: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -92,8 +125,13 @@ class LiveCompareSummary(BaseModel):
 
     fastest_model_id: str | None = None
     fastest_model_label: str | None = None
+    shortest_response_model_id: str | None = None
+    shortest_response_model_label: str | None = None
     longest_response_model_id: str | None = None
     longest_response_model_label: str | None = None
+    execution_mode: CompareExecutionMode = "serial"
+    execution_order: list[str] = Field(default_factory=list)
+    advisory: str | None = None
     all_successful: bool = False
     successful_model_count: int = 0
     failed_model_count: int = 0
@@ -123,10 +161,13 @@ class LiveCompareRunRecord(BaseModel):
     question: str
     system_prompt: str | None = None
     mode: CompareMode = "chat"
+    execution_mode: CompareExecutionMode = "serial"
+    execution_order: list[str] = Field(default_factory=list)
     selected_models: list[str] = Field(default_factory=list)
     max_tokens: int = 600
     temperature: float = 0.0
     top_p: float = 1.0
+    manual_note: str | None = None
     results: list[LiveCompareModelResult] = Field(default_factory=list)
     summary: LiveCompareSummary = Field(default_factory=LiveCompareSummary)
     latest_error: str | None = None

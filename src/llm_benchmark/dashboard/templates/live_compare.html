@@ -13,8 +13,8 @@
           <p class="eyebrow">Feberdin Benchmark Control</p>
           <h1>{{ page_title }}</h1>
           <p class="hero-copy">
-            Drei Modelle direkt nebeneinander vergleichen, mit derselben Frage, denselben Parametern und derselben
-            Transportlogik wie im Benchmark-Backend.
+            Drei Modelle direkt nebeneinander vergleichen, mit derselben Frage, denselben Parametern und einer
+            fairen Standardausfuehrung fuer CPU-lastige lokale Hardware.
           </p>
         </div>
         <div class="hero-meta">
@@ -23,8 +23,8 @@
             <strong>{{ live_compare_payload.available_models | length }}</strong>
           </div>
           <div class="meta-card">
-            <span>Default</span>
-            <strong>{{ live_compare_payload.default_models | join(", ") }}</strong>
+            <span>Presets</span>
+            <strong>{{ live_compare_payload.presets | length }}</strong>
           </div>
           <div class="meta-card">
             <span>Letzter Compare</span>
@@ -49,9 +49,39 @@
           <span id="live-compare-status-badge" class="status-badge neutral">{{ live_compare_payload.state.status }}</span>
         </div>
         <p class="muted">
-          Diese Ansicht startet keinen Benchmark-Testfall, sondern sendet exakt dieselbe Eingabe direkt an die
-          ausgewaehlten Modelle. So kannst du Antwortstil, Geschwindigkeit und Fehlerverhalten nebeneinander sehen.
+          Diese Ansicht startet keinen Benchmark-Testfall, sondern sendet dieselbe Eingabe direkt an die ausgewaehlten
+          Modelle. Standardmaessig laeuft der Vergleich seriell, damit lokale CPU-Modelle sich die Laufzeit nicht
+          gegenseitig verfälschen.
         </p>
+
+        <div id="execution-mode-advisory" class="alert subtle-alert">
+          <h3>Fair Compare Hinweis</h3>
+          <p>{{ live_compare_payload.state.summary.advisory if live_compare_payload.state.summary else "Im seriellen Modus werden Modelle nacheinander ausgefuehrt, damit Laufzeiten auf CPU-lastiger lokaler Hardware fair vergleichbar bleiben." }}</p>
+        </div>
+
+        <section class="preset-section">
+          <div class="row-head">
+            <div>
+              <span class="status-badge neutral">Praxis-Presets</span>
+              <h2>10 direkte Alltagstests</h2>
+            </div>
+          </div>
+          <div id="preset-grid" class="preset-grid">
+            {% for preset in live_compare_payload.presets %}
+              <button
+                type="button"
+                class="preset-card"
+                data-preset-id="{{ preset.preset_id }}"
+                data-mode="{{ preset.mode }}"
+                data-prompt="{{ preset.prompt }}"
+                data-system-prompt="{{ preset.system_prompt or '' }}"
+              >
+                <strong>{{ preset.title }}</strong>
+                <small>{{ preset.goal }}</small>
+              </button>
+            {% endfor %}
+          </div>
+        </section>
 
         <form id="live-compare-form" class="compare-form">
           <label class="compare-field compare-field-wide">
@@ -76,10 +106,20 @@
 
           <div class="compare-config-grid">
             <label class="compare-field">
-              <span>Modus</span>
+              <span>Antwortmodus</span>
               <select id="live-mode" name="mode">
                 {% for mode in live_compare_payload.modes %}
                   <option value="{{ mode.value }}">{{ mode.label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="compare-field">
+              <span>Ausfuehrung</span>
+              <select id="live-execution-mode" name="execution_mode">
+                {% for execution_mode in live_compare_payload.execution_modes %}
+                  <option value="{{ execution_mode.value }}" {% if execution_mode.value == "serial" %}selected{% endif %}>
+                    {{ execution_mode.label }}
+                  </option>
                 {% endfor %}
               </select>
             </label>
@@ -115,6 +155,16 @@
             </div>
           </div>
 
+          <label class="compare-field compare-field-wide">
+            <span>Manuelle Vergleichsnotiz</span>
+            <textarea
+              id="live-manual-note"
+              name="manual_note"
+              rows="2"
+              placeholder="Optional: z. B. 'Mistral war am faktengetreuesten'. Diese Notiz wird mit dem Lauf gespeichert."
+            ></textarea>
+          </label>
+
           <div class="action-row compare-actions">
             <button id="live-compare-submit" type="submit" class="primary-button">Alle 3 vergleichen</button>
             <button id="live-compare-reset" type="button" class="secondary-button">Reset</button>
@@ -136,14 +186,14 @@
           <small id="summary-fastest-id">{{ live_compare_payload.state.summary.fastest_model_id if live_compare_payload.state.summary else "-" }}</small>
         </article>
         <article class="metric-card accent-orange">
-          <span>Laengste Antwort</span>
-          <strong id="summary-longest">{{ live_compare_payload.state.summary.longest_response_model_label if live_compare_payload.state.summary else "n/a" }}</strong>
-          <small id="summary-success-fail">{{ (live_compare_payload.state.summary.successful_model_count|string ~ " ok / " ~ live_compare_payload.state.summary.failed_model_count|string ~ " fail") if live_compare_payload.state.summary else "-" }}</small>
+          <span>Kuerzeste Antwort</span>
+          <strong id="summary-shortest">{{ live_compare_payload.state.summary.shortest_response_model_label if live_compare_payload.state.summary else "n/a" }}</strong>
+          <small id="summary-longest">{{ live_compare_payload.state.summary.longest_response_model_label if live_compare_payload.state.summary else "-" }}</small>
         </article>
         <article class="metric-card accent-purple">
-          <span>Letzter Fehler</span>
-          <strong id="summary-latest-error">{{ live_compare_payload.state.latest_error or "kein Fehler" }}</strong>
-          <small>Parallel, isoliert, persistent</small>
+          <span>Ausfuehrung</span>
+          <strong id="summary-execution-mode">{{ live_compare_payload.state.execution_mode or "serial" }}</strong>
+          <small id="summary-execution-order">{{ (live_compare_payload.state.execution_order or live_compare_payload.default_models) | join(" → ") }}</small>
         </article>
       </section>
 
@@ -156,6 +206,10 @@
           <p class="muted" id="live-compare-question-preview">
             {{ live_compare_payload.state.question or "Noch keine Frage gesendet." }}
           </p>
+        </div>
+        <div id="live-compare-note" class="compare-note {% if not live_compare_payload.state.manual_note %}hidden{% endif %}">
+          <strong>Manuelle Notiz</strong>
+          <p>{{ live_compare_payload.state.manual_note or "" }}</p>
         </div>
         <div id="live-compare-grid" class="live-compare-grid"></div>
       </section>
@@ -195,9 +249,9 @@
                 <tr>
                   <th>Status</th>
                   <th>Zeit</th>
-                  <th>Modus</th>
+                  <th>Prompttyp</th>
+                  <th>Ausfuehrung</th>
                   <th>Frage</th>
-                  <th>Modelle</th>
                   <th>Aktion</th>
                 </tr>
               </thead>
@@ -207,8 +261,8 @@
                     <td>{{ row.status }}</td>
                     <td>{{ row.created_at }}</td>
                     <td>{{ row.mode }}</td>
+                    <td>{{ row.execution_mode }}</td>
                     <td>{{ row.question_excerpt }}</td>
-                    <td>{{ row.selected_models | join(", ") }}</td>
                     <td><button type="button" class="secondary-button history-load-button" data-run-id="{{ row.run_id }}">Laden</button></td>
                   </tr>
                 {% else %}
@@ -226,9 +280,10 @@
       let liveCompareState = initialLiveComparePayload.state;
       let liveCompareHistory = initialLiveComparePayload.history;
       let liveComparePollHandle = null;
+      const presetLookup = Object.fromEntries((initialLiveComparePayload.presets || []).map((preset) => [preset.preset_id, preset]));
 
       function badgeClassFromStatus(status) {
-        if (status === "success" || status === "succeeded") return "success";
+        if (status === "finished" || status === "success" || status === "succeeded") return "success";
         if (status === "warning" || status === "partial") return "warning";
         if (status === "error" || status === "failed") return "danger";
         if (status === "running" || status === "queued") return "warning";
@@ -257,6 +312,28 @@
         }
         node.className = `inline-message ${level === "error" ? "danger-alert" : level === "warning" ? "warning-alert" : ""}`;
         node.textContent = text;
+      }
+
+      function renderAdvisory(state) {
+        const advisoryNode = document.getElementById("execution-mode-advisory");
+        const summary = state.summary || {};
+        const advisoryText = summary.advisory ||
+          (state.execution_mode === "parallel"
+            ? "Parallelmodus kann lokale Laufzeiten verfälschen, weil Modelle gleichzeitig um CPU-Ressourcen konkurrieren."
+            : "Im seriellen Modus werden Modelle nacheinander ausgefuehrt, damit Laufzeiten auf CPU-lastiger lokaler Hardware fair vergleichbar bleiben.");
+        advisoryNode.className = `alert ${state.execution_mode === "parallel" ? "warning-alert" : "subtle-alert"}`;
+        advisoryNode.innerHTML = `
+          <h3>${state.execution_mode === "parallel" ? "Parallelmodus Warnung" : "Fair Compare Hinweis"}</h3>
+          <p>${escapeHtml(advisoryText)}</p>
+        `;
+      }
+
+      function buildResultBadges(result) {
+        const badges = [...(result.quick_badges || [])];
+        if (result.uncertainty_marked === true && !badges.includes("Unsicherheit markiert")) {
+          badges.push("Unsicherheit markiert");
+        }
+        return badges.map((badge) => `<span class="status-badge accent">${escapeHtml(badge)}</span>`).join("");
       }
 
       function buildResponseCard(result) {
@@ -309,27 +386,31 @@
               </button>
             </header>
 
+            <div class="compare-badge-row">
+              ${buildResultBadges(result) || '<span class="status-badge neutral">keine Zusatzmarker</span>'}
+            </div>
+
             <div class="compare-metrics">
-              <div><span>Status</span><strong>${escapeHtml(result.success === null ? result.status : result.success ? "success" : "failed")}</strong></div>
-              <div><span>Dauer</span><strong>${escapeHtml(result.duration_human || formatMetric(result.duration_ms, " ms"))}</strong></div>
+              <div><span>Isolated</span><strong>${escapeHtml(formatMetric(result.isolated_duration_ms, " ms"))}</strong></div>
+              <div><span>Queue Wait</span><strong>${escapeHtml(formatMetric(result.queue_wait_ms, " ms"))}</strong></div>
+              <div><span>Total seit Start</span><strong>${escapeHtml(formatMetric(result.total_elapsed_since_run_start_ms, " ms"))}</strong></div>
               <div><span>TTFT</span><strong>${escapeHtml(formatMetric(result.ttft_ms, " ms"))}</strong></div>
               <div><span>TPS</span><strong>${escapeHtml(formatMetric(result.tokens_per_second))}</strong></div>
               <div><span>Input</span><strong>${escapeHtml(formatMetric(result.input_tokens))}</strong></div>
               <div><span>Output</span><strong>${escapeHtml(formatMetric(result.output_tokens))}</strong></div>
               <div><span>HTTP</span><strong>${escapeHtml(formatMetric(result.http_status))}</strong></div>
-              <div><span>Finish</span><strong>${escapeHtml(result.finish_reason || "n/a")}</strong></div>
             </div>
 
             <div class="compare-time-row">
-              <span>Start <strong>${escapeHtml(result.started_at || "n/a")}</strong></span>
-              <span>Ende <strong>${escapeHtml(result.finished_at || "n/a")}</strong></span>
-              <span>Laufzeit <strong>${escapeHtml(result.elapsed_human || result.duration_human || "n/a")}</strong></span>
+              <span>Start <strong>${escapeHtml(result.execution_start_at || "n/a")}</strong></span>
+              <span>Ende <strong>${escapeHtml(result.execution_end_at || "n/a")}</strong></span>
+              <span>Laufzeit <strong>${escapeHtml(result.total_elapsed_human || result.duration_human || "n/a")}</strong></span>
             </div>
 
             ${detailsHtml}
 
             <div class="compare-response-shell">
-              <pre>${escapeHtml(responseText || "Noch keine Antwort vorhanden.")}</pre>
+              <pre>${escapeHtml(responseText || (result.status === "waiting" ? "Wartet auf Ausfuehrung..." : result.status === "running" ? "Antwort wird gerade erzeugt..." : "Keine Antwort vorhanden."))}</pre>
             </div>
             ${jsonHtml}
           </article>
@@ -342,13 +423,22 @@
         document.getElementById("summary-run-status").textContent = state.status || "idle";
         document.getElementById("summary-fastest").textContent = summary.fastest_model_label || "n/a";
         document.getElementById("summary-fastest-id").textContent = summary.fastest_model_id || "-";
+        document.getElementById("summary-shortest").textContent = summary.shortest_response_model_label || "n/a";
         document.getElementById("summary-longest").textContent = summary.longest_response_model_label || "n/a";
-        document.getElementById("summary-success-fail").textContent = `${summary.successful_model_count || 0} ok / ${summary.failed_model_count || 0} fail`;
-        document.getElementById("summary-latest-error").textContent = state.latest_error || "kein Fehler";
+        document.getElementById("summary-execution-mode").textContent = state.execution_mode || "serial";
+        document.getElementById("summary-execution-order").textContent = (state.execution_order || []).join(" → ") || "n/a";
         const badge = document.getElementById("live-compare-status-badge");
         badge.className = `status-badge ${badgeClassFromStatus(state.status)}`;
         badge.textContent = state.status || "idle";
         document.getElementById("live-compare-question-preview").textContent = state.question || "Noch keine Frage gesendet.";
+
+        const noteWrapper = document.getElementById("live-compare-note");
+        if (state.manual_note) {
+          noteWrapper.classList.remove("hidden");
+          noteWrapper.innerHTML = `<strong>Manuelle Notiz</strong><p>${escapeHtml(state.manual_note)}</p>`;
+        } else {
+          noteWrapper.classList.add("hidden");
+        }
       }
 
       function renderEvents(state) {
@@ -377,8 +467,8 @@
             <td>${escapeHtml(row.status)}</td>
             <td>${escapeHtml(row.created_at)}</td>
             <td>${escapeHtml(row.mode)}</td>
+            <td>${escapeHtml(row.execution_mode)}</td>
             <td>${escapeHtml(row.question_excerpt)}</td>
-            <td>${escapeHtml((row.selected_models || []).join(", "))}</td>
             <td><button type="button" class="secondary-button history-load-button" data-run-id="${escapeHtml(row.run_id)}">Laden</button></td>
           </tr>
         `).join("");
@@ -393,7 +483,7 @@
           grid.innerHTML = `
             <article class="compare-empty-state">
               <h2>Noch kein Live Compare gestartet</h2>
-              <p>Gib oben eine echte Frage ein und vergleiche Mistral, Qwen und OpenAI direkt nebeneinander.</p>
+              <p>Waehle ein Praxis-Preset oder gib oben eine eigene Frage ein und vergleiche die Modelle direkt nebeneinander.</p>
             </article>
           `;
           return;
@@ -404,6 +494,7 @@
       function renderState(payload) {
         liveCompareState = payload;
         renderSummary(payload);
+        renderAdvisory(payload);
         renderCompareGrid(payload);
         renderEvents(payload);
       }
@@ -451,6 +542,15 @@
         }
       }
 
+      function applyPreset(presetId) {
+        const preset = presetLookup[presetId];
+        if (!preset) return;
+        document.getElementById("live-question").value = preset.prompt;
+        document.getElementById("live-system-prompt").value = preset.system_prompt || "";
+        document.getElementById("live-mode").value = preset.mode || "chat";
+        setMessage(`Preset geladen: ${preset.title}`);
+      }
+
       async function startLiveCompare(event) {
         event.preventDefault();
         const selectedModels = Array.from(document.querySelectorAll("input[name='models']:checked")).map((node) => node.value);
@@ -464,9 +564,11 @@
           system_prompt: document.getElementById("live-system-prompt").value.trim(),
           models: selectedModels,
           mode: document.getElementById("live-mode").value,
+          execution_mode: document.getElementById("live-execution-mode").value,
           max_tokens: Number(document.getElementById("live-max-tokens").value),
           temperature: Number(document.getElementById("live-temperature").value),
           top_p: Number(document.getElementById("live-top-p").value),
+          manual_note: document.getElementById("live-manual-note").value.trim(),
         };
 
         if (!payload.question) {
@@ -516,21 +618,34 @@
         }
       }
 
+      document.getElementById("live-execution-mode").addEventListener("change", (event) => {
+        renderAdvisory({ ...liveCompareState, execution_mode: event.target.value, summary: { advisory: "" } });
+      });
+
       document.getElementById("live-compare-form").addEventListener("submit", startLiveCompare);
       document.getElementById("live-compare-reset").addEventListener("click", () => {
         document.getElementById("live-question").value = "";
         document.getElementById("live-system-prompt").value = "";
         document.getElementById("live-mode").value = "chat";
+        document.getElementById("live-execution-mode").value = "serial";
         document.getElementById("live-max-tokens").value = "600";
         document.getElementById("live-temperature").value = "0.0";
         document.getElementById("live-top-p").value = "1.0";
+        document.getElementById("live-manual-note").value = "";
         document.querySelectorAll("input[name='models']").forEach((node) => {
           node.checked = initialLiveComparePayload.default_models.includes(node.value);
         });
+        renderAdvisory({ execution_mode: "serial", summary: {} });
         setMessage("");
       });
 
       document.addEventListener("click", async (event) => {
+        const presetButton = event.target.closest(".preset-card");
+        if (presetButton) {
+          applyPreset(presetButton.dataset.presetId);
+          return;
+        }
+
         const copyButton = event.target.closest(".compare-copy-button");
         if (copyButton) {
           const text = decodeURIComponent(copyButton.dataset.response || "");

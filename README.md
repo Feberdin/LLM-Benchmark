@@ -24,7 +24,9 @@ Das Tool hostet diese Modelle nicht selbst. Es arbeitet als zentraler Benchmark-
 - Exportiert Aggregationen als CSV, Markdown, HTML, `final_report.json` und `analysis_input.json`.
 - Liefert ein integriertes Web-Dashboard auf Basis derselben Ergebnisdateien.
 - Kann Benchmarks direkt aus dem Dashboard starten und den Fortschritt mit Timeline, Status und Historie anzeigen.
-- Enthält eine Live-Compare-Ansicht fuer den direkten Antwortvergleich von 2 bis 4 Modellen mit Default auf Mistral, Qwen und OpenAI.
+- Enthaelt eine Live-Compare-Ansicht fuer den direkten Antwortvergleich von 2 bis 4 Modellen mit Default auf Mistral, Qwen und OpenAI.
+- Fuehrt Live Compare standardmaessig seriell aus, damit CPU-lastige lokale Systeme fairere Laufzeiten liefern.
+- Liefert 10 sofort nutzbare Praxis-Presets fuer Docker, Ollama, Paperless, Home Assistant, WhatsApp, YAML, Coding und Loganalyse.
 - Zeigt projektbezogene Empfehlungen fuer SecondBrain, secondbrain-voice-gateway und Paperless-KIplus.
 - Arbeitet robust weiter, auch wenn einzelne Endpunkte fehlschlagen, timeouts produzieren oder keine Token-Metriken liefern.
 - Ist fuer Unraid-Mounts mit `/config`, `/app/tests` und `/app/results` vorbereitet.
@@ -35,6 +37,13 @@ Das Tool hostet diese Modelle nicht selbst. Es arbeitet als zentraler Benchmark-
 Das integrierte Dashboard laeuft im selben Container und nutzt denselben Benchmark-Pfad wie die CLI. Es liest die vorhandenen Ergebnisdateien direkt, kann aber zusaetzlich kontrolliert einen neuen Benchmark im Hintergrund starten und dessen Status sichtbar machen.
 
 Zusaetzlich gibt es unter `/live-compare` eine interaktive Live-Compare-Ansicht. Sie verwendet dieselben Modellkonfigurationen und denselben OpenAI-kompatiblen Client-Stack wie der Benchmark, sendet aber eine freie Eingabe direkt an die ausgewaehlten Modelle und zeigt die Antworten nebeneinander an.
+
+Wichtige Fairness-Regel fuer produktive CPU-Systeme:
+
+- Standardmodus ist `Fair Compare (seriell)`.
+- Die Modelle laufen dabei in dieser Reihenfolge: `Mistral Local`, `Qwen Local`, `OpenAI Reference`.
+- Das vermeidet, dass zwei lokale Modelle gleichzeitig um dieselbe CPU-Zeit konkurrieren und dadurch scheinbar langsamer oder schneller wirken, als sie isoliert waeren.
+- `Parallel Compare` bleibt verfuegbar, ist aber sichtbar als potenziell unfair fuer CPU-only- oder CPU-lastige Server gekennzeichnet.
 
 Vor dem eigentlichen Benchmark kann das Dashboard ausserdem per Button einen leichten LLM-Erreichbarkeits-Check ausfuehren. Dieser prueft fuer alle aktiven Modelle den OpenAI-kompatiblen `/models`-Endpunkt, inklusive Auth und Sichtbarkeit des konfigurierten Modellnamens.
 
@@ -170,6 +179,8 @@ Wichtige Architekturentscheidung:
 │   │   ├── secondbrain_suite.yaml
 │   │   ├── voice_gateway_suite.yaml
 │   │   └── paperless_kiplus_suite.yaml
+│   ├── live_compare
+│   │   └── presets.yaml
 │   └── tests
 │       ├── 001_chat_cap_theorem.yaml
 │       ├── ...
@@ -343,6 +354,17 @@ Zusaetzlich erzeugt die Live-Compare-Ansicht eigene persistente Dateien unter:
 - `results/live_compare/current_state.json`
 - `results/live_compare/history.json`
 - `results/live_compare/runs/<run_id>.json`
+
+Diese Dateien enthalten jetzt auch:
+
+- `execution_mode`
+- `execution_order`
+- `manual_note`
+- `queue_wait_ms`
+- `execution_start_at`
+- `execution_end_at`
+- `isolated_duration_ms`
+- `total_elapsed_since_run_start_ms`
 
 ### `final_report.json`
 
@@ -577,9 +599,11 @@ Hinweis:
 2. Oben eine echte Alltagsfrage oder ein Log/Prompt eintragen.
 3. Optional einen kurzen System-Prompt hinterlegen.
 4. Standardmaessig bleiben `Mistral Local`, `Qwen Local` und `OpenAI Reference` aktiviert.
-5. `Alle 3 vergleichen` klicken.
-6. Die drei Antwortkarten zeigen live Status, Dauer, Token-Metriken, Fehler und die eigentliche Antwort.
-7. Fruehere Vergleiche bleiben unter `results/live_compare/` und in der History auf der Seite erhalten.
+5. Einen Ausfuehrungsmodus waehlen. Standard ist `Fair Compare (seriell)`.
+6. Optional eine kurze manuelle Notiz wie `Mistral wirkt vorsichtiger bei Faktenfragen` hinterlegen.
+7. `Alle 3 vergleichen` klicken.
+8. Die drei Antwortkarten zeigen live Status, isolierte Dauer, Queue-Wartezeit, Token-Metriken, Fehler und die eigentliche Antwort.
+9. Fruehere Vergleiche bleiben unter `results/live_compare/` und in der History auf der Seite erhalten.
 
 ### 7. Ergebnisse finden
 
@@ -620,26 +644,75 @@ Standardmaessig werden diese drei Modelle vorausgewaehlt:
 - `Qwen Local`
 - `OpenAI Reference`
 
+### Fair Compare vs. Parallel Compare
+
+Der Standardmodus ist jetzt bewusst:
+
+- `Fair Compare (seriell)`
+
+Warum:
+
+- Auf CPU-lastigen lokalen Servern verfaelschen parallele Requests die Laufzeiten stark.
+- Zwei lokale Modelle, die gleichzeitig rechnen, teilen sich dieselben CPU-Ressourcen und wirken dadurch kuenstlich langsamer.
+- Serielle Ausfuehrung liefert fuer `isolated_duration_ms` die deutlich belastbarere Vergleichsmetrik.
+
+Verfuegbare Modi:
+
+- `Fair Compare (seriell)`
+  Modelle laufen nacheinander in der festen Reihenfolge `Mistral Local`, `Qwen Local`, `OpenAI Reference`.
+- `Parallel Compare`
+  Alle ausgewaehlten Modelle starten moeglichst gleichzeitig. Das ist praktisch fuer grobe Antwortvergleiche, aber fuer lokale CPU-Latenzen oft unfair.
+
 Die Ansicht zeigt pro Modellspalte:
 
-- Status `waiting`, `running`, `success` oder `failed`
+- Status `waiting`, `running`, `finished` oder `failed`
 - Start- und Endzeit
-- `duration_ms` plus lesbare Dauer
+- `isolated_duration_ms` als wichtigste faire Laufzeitmetrik
+- `queue_wait_ms`
+- `total_elapsed_since_run_start_ms`
 - optional `ttft_ms`
 - optional `input_tokens`, `output_tokens` und `tokens_per_second`
 - HTTP-Status
 - optionale JSON-Vorschau bei strukturierter Antwort
 - kompakte Fehlerkarte mit einklappbaren technischen Details
+- Quick-Badges wie `fastest`, `shortest-response`, `json-detected`, `yaml-detected`, `code-detected` oder `uncertainty-marked`
+
+### Die 10 integrierten Praxis-Presets
+
+Die Presets liegen unter [presets.yaml](/Users/joachim.stiegler/LLM-Benchmark/fixtures/live_compare/presets.yaml) und koennen direkt in das Prompt-Feld geladen werden.
+
+1. `Faktenfrage mit Unsicherheitsdisziplin`
+   Prueft, ob ein Modell sauber zwischen Wissen und Unsicherheit trennt.
+2. `Docker-Fehleranalyse`
+   Praxisnaher GHCR-/Docker-/Unraid-Support-Fall.
+3. `Ollama Troubleshooting`
+   Strukturierte Fehlersuche fuer lokale CPU-only-Inferenz.
+4. `Paperless Dokumentklassifikation`
+   JSON-Treue fuer dokumentnahe Workflows.
+5. `Steuerliche Einordnung vorsichtig`
+   Konservative Tax-Enrichment-Naeherung ohne ueberzogene Sicherheit.
+6. `Home Assistant Statusinterpretation`
+   Kurze, sprachgeeignete Zusammenfassung fuer Voice-/HA-Szenarien.
+7. `WhatsApp Gespraechsauswertung`
+   Kommunikations- und SecondBrain-nahe Extraktion.
+8. `YAML Konfiguration robust`
+   Strukturausgabe und Konfigurationsdisziplin ohne Markdown-Huelle.
+9. `Python Coding Test`
+   Kleine Coding-Aufgabe mit Funktion und pytest-Test.
+10. `Loganalyse mit Ursache und Massnahmen`
+    Strukturierte Root-Cause- und Next-Step-Antwort fuer echte Betriebsfehler.
 
 Persistenz:
 
 - Jeder Live-Compare-Lauf wird als eigenes JSON unter `results/live_compare/runs/` gespeichert.
 - Die History-Liste auf der Seite liest diese lauffaehigen Persistenzdaten wieder ein.
+- Eine optionale manuelle Notiz wird zusammen mit dem Lauf gespeichert.
 
 Grenzen der Aussagekraft:
 
 - Live Compare ist absichtlich weniger streng als der Benchmark und bewertet nicht automatisch dieselbe Regeltiefe wie eine Test-Suite.
 - Lokale CPU-Modelle koennen im parallelen Direktvergleich deutlich langsamer sein als bei einem isolierten Einzelrequest.
+- Fuer CPU-lastige lokale Hardware ist `Fair Compare (seriell)` die empfohlene Standardwahl.
 - Token- und TTFT-Metriken sind providerabhaengig und nicht bei jedem Endpoint verfuegbar.
 - Ein besonders gutes Live-Compare-Ergebnis ersetzt keine projektspezifische Suite wie `secondbrain`, `voice_gateway` oder `paperless_kiplus`.
 

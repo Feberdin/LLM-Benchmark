@@ -1,8 +1,8 @@
 """
-Purpose: Manage interactive live compare runs, their current UI state and persistent history snapshots.
+Purpose: Manage interactive live compare runs, their current UI state, presets and persistent history snapshots.
 Input/Output: Starts background compare jobs, exposes pollable state for the dashboard and stores finished runs as JSON.
-Important invariants: One live compare run at a time is enough for an operator-facing UI, and one failed model must never erase the other columns.
-How to debug: Inspect `live_compare/current_state.json`, `live_compare/history.json` and `live_compare/runs/<run_id>.json`.
+Important invariants: Fair serial execution is the default for CPU-bound systems, one failed model must never erase the other columns and presets stay loadable without extra services.
+How to debug: Inspect `live_compare/current_state.json`, `live_compare/history.json`, `live_compare/runs/<run_id>.json` and the loaded preset file path.
 """
 
 from __future__ import annotations
@@ -16,16 +16,20 @@ import logging
 import os
 
 import orjson
+import yaml
 
 from llm_benchmark.config.loader import load_config
 from llm_benchmark.domain.live_compare import (
+    CompareExecutionMode,
     CompareRunStatus,
     LiveCompareEvent,
     LiveCompareModelResult,
+    LiveComparePreset,
     LiveCompareRequest,
     LiveCompareRunRecord,
+    LiveCompareSummary,
 )
-from llm_benchmark.runner.live_compare import execute_live_compare_sync
+from llm_benchmark.runner.live_compare import DEFAULT_FAIR_ORDER, execute_live_compare_sync
 from llm_benchmark.utils import ensure_directory, isoformat_utc, json_dump_to_path
 
 LOGGER = logging.getLogger(__name__)
@@ -43,9 +47,12 @@ class LiveCompareState:
     question: str | None = None
     system_prompt: str | None = None
     mode: str = "chat"
+    execution_mode: CompareExecutionMode = "serial"
+    execution_order: list[str] = field(default_factory=list)
     max_tokens: int = 600
     temperature: float = 0.0
     top_p: float = 1.0
+    manual_note: str | None = None
     selected_models: list[str] = field(default_factory=list)
     results: list[LiveCompareModelResult] = field(default_factory=list)
     summary: dict[str, Any] = field(default_factory=dict)
@@ -59,7 +66,7 @@ class LiveCompareManager:
 
     Why this exists:
     The operator should be able to compare real responses side-by-side without leaving the dashboard, while the
-    server keeps a durable history that can be revisited later.
+    server keeps a durable history that can be revisited later and respects CPU-bound fairness by default.
     """
 
     def __init__(self, *, config_path: Path, results_dir: Path) -> None:
@@ -69,10 +76,12 @@ class LiveCompareManager:
         self.runs_dir = ensure_directory(self.live_compare_dir / "runs")
         self.state_path = self.live_compare_dir / "current_state.json"
         self.history_path = self.live_compare_dir / "history.json"
+        self.presets_path = self._discover_presets_path()
         self._lock = RLock()
         self._active_thread: Thread | None = None
         self._state = self._load_state()
         self._history = self._load_history()
+        self._presets = self._load_presets()
         if self._state.status in {"queued", "running"}:
             self._state.status = "interrupted"
             self._state.latest_error = "Vorheriger Live-Compare-Lauf wurde nicht sauber beendet."
@@ -85,7 +94,7 @@ class LiveCompareManager:
             self._persist_locked()
 
     def page_payload(self) -> dict[str, Any]:
-        """Return current state, model choices and history for the live compare HTML page."""
+        """Return current state, model choices, presets and history for the live compare HTML page."""
 
         with self._lock:
             state = self._state_to_dict(self._state)
@@ -113,6 +122,19 @@ class LiveCompareManager:
                 {"value": "technical", "label": "Technical / Coding"},
                 {"value": "summarization", "label": "Summarization"},
             ],
+            "execution_modes": [
+                {
+                    "value": "serial",
+                    "label": "Fair Compare (seriell)",
+                    "description": "Standard fuer CPU-lastige lokale Server. Modelle laufen nacheinander fuer fairere Latenzen.",
+                },
+                {
+                    "value": "parallel",
+                    "label": "Parallel Compare",
+                    "description": "Kann lokale Laufzeiten verfälschen, weil mehrere Modelle gleichzeitig um CPU-Zeit konkurrieren.",
+                },
+            ],
+            "presets": [preset.model_dump(mode="json") for preset in self._presets],
         }
 
     def current_payload(self) -> dict[str, Any]:
@@ -138,9 +160,11 @@ class LiveCompareManager:
             raw_request
             | {
                 "models": raw_request.get("models") or self._default_model_ids(enabled_model_ids),
+                "execution_mode": raw_request.get("execution_mode") or "serial",
             }
         )
         selected_models = self._validate_requested_models(enabled_model_ids, request.models)
+        execution_order = self._ordered_selection(selected_models)
 
         with self._lock:
             if self._active_thread and self._active_thread.is_alive():
@@ -156,7 +180,7 @@ class LiveCompareManager:
                     endpoint=enabled_models_by_id[model_id].base_url,
                     status="waiting",
                 )
-                for model_id in selected_models
+                for model_id in execution_order
             ]
             self._state = LiveCompareState(
                 run_id=f"livecmp_{os.urandom(6).hex()}",
@@ -165,18 +189,26 @@ class LiveCompareManager:
                 question=request.question,
                 system_prompt=request.system_prompt,
                 mode=request.mode,
+                execution_mode=request.execution_mode,
+                execution_order=execution_order,
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
                 top_p=request.top_p,
-                selected_models=selected_models,
+                manual_note=request.manual_note,
+                selected_models=execution_order,
                 results=placeholder_results,
+                summary={
+                    "execution_mode": request.execution_mode,
+                    "execution_order": execution_order,
+                    "advisory": self._execution_mode_advisory(request.execution_mode),
+                },
                 events=[
                     LiveCompareEvent(
                         timestamp=isoformat_utc(),
                         event="live_compare_queued",
                         level="info",
                         summary="Live Compare wurde in die Hintergrundausfuehrung uebernommen.",
-                        details={"models": selected_models},
+                        details={"models": execution_order, "execution_mode": request.execution_mode},
                     )
                 ],
             )
@@ -200,8 +232,12 @@ class LiveCompareManager:
             self._append_event_locked(
                 event="live_compare_started",
                 level="info",
-                summary="Live Compare gestartet. Antworten laufen jetzt parallel ein.",
-                details={"mode": request.mode},
+                summary=(
+                    "Live Compare gestartet. Modelle werden nacheinander ausgefuehrt."
+                    if request.execution_mode == "serial"
+                    else "Live Compare gestartet. Modelle laufen parallel."
+                ),
+                details={"mode": request.mode, "execution_mode": request.execution_mode},
             )
             self._persist_locked()
 
@@ -217,6 +253,9 @@ class LiveCompareManager:
                     return
                 self._state.status = record.status
                 self._state.finished_at = record.finished_at
+                self._state.execution_mode = record.execution_mode
+                self._state.execution_order = record.execution_order
+                self._state.manual_note = record.manual_note
                 self._state.summary = record.summary.model_dump(mode="json")
                 self._state.results = record.results
                 self._state.latest_error = record.latest_error
@@ -251,12 +290,23 @@ class LiveCompareManager:
                 return
 
             event = str(payload.get("event", "progress"))
-            if event == "compare_model_started":
+            if event == "compare_started":
+                self._state.execution_mode = payload.get("execution_mode", self._state.execution_mode)
+                self._state.execution_order = list(payload.get("execution_order") or self._state.execution_order)
+                self._state.summary = {
+                    **self._state.summary,
+                    "execution_mode": self._state.execution_mode,
+                    "execution_order": self._state.execution_order,
+                    "advisory": self._execution_mode_advisory(self._state.execution_mode),
+                }
+            elif event == "compare_model_started":
                 result = self._find_result_locked(str(payload.get("model_id")))
                 if result is not None:
                     result.status = "running"
-                    result.started_at = payload.get("started_at")
+                    result.started_at = payload.get("execution_start_at")
+                    result.execution_start_at = payload.get("execution_start_at")
                     result.endpoint = payload.get("endpoint")
+                    result.queue_wait_ms = payload.get("queue_wait_ms")
             elif event == "compare_model_finished":
                 result_payload = payload.get("result") or {}
                 model_id = str(result_payload.get("model_id", ""))
@@ -268,7 +318,7 @@ class LiveCompareManager:
                     if updated.error_message:
                         self._state.latest_error = updated.error_message
             elif event == "compare_finished":
-                self._state.summary = payload.get("summary") or {}
+                self._state.summary = payload.get("summary") or self._state.summary
 
             summary = self._summarize_event(payload)
             self._append_event_locked(
@@ -288,11 +338,22 @@ class LiveCompareManager:
     def _summarize_event(self, payload: dict[str, Any]) -> dict[str, str]:
         event = str(payload.get("event", "progress"))
         if event == "compare_started":
-            return {"level": "info", "summary": "Live Compare wurde vorbereitet."}
+            mode = payload.get("execution_mode", "serial")
+            return {
+                "level": "info",
+                "summary": (
+                    "Fair Compare wurde vorbereitet."
+                    if mode == "serial"
+                    else "Parallel Compare wurde vorbereitet."
+                ),
+            }
         if event == "compare_model_started":
             return {
                 "level": "info",
-                "summary": f"{payload.get('model_label', 'Modell')} bearbeitet jetzt dieselbe Eingabe.",
+                "summary": (
+                    f"{payload.get('model_label', 'Modell')} startet jetzt nach "
+                    f"{payload.get('queue_wait_ms', 0)} ms Wartezeit."
+                ),
             }
         if event == "compare_model_finished":
             result = payload.get("result") or {}
@@ -300,8 +361,8 @@ class LiveCompareManager:
                 return {
                     "level": "success",
                     "summary": (
-                        f"{result.get('model_label', 'Modell')} antwortete in "
-                        f"{result.get('duration_human') or result.get('duration_ms') or 'n/a'}."
+                        f"{result.get('model_label', 'Modell')} beendet: "
+                        f"{result.get('isolated_duration_ms') or result.get('duration_ms') or 'n/a'} ms isolierte Dauer."
                     ),
                 }
             return {
@@ -329,23 +390,34 @@ class LiveCompareManager:
             "question": state.question,
             "system_prompt": state.system_prompt,
             "mode": state.mode,
+            "execution_mode": state.execution_mode,
+            "execution_order": list(state.execution_order),
             "max_tokens": state.max_tokens,
             "temperature": state.temperature,
             "top_p": state.top_p,
+            "manual_note": state.manual_note,
             "selected_models": list(state.selected_models),
             "results": [result.model_dump(mode="json") for result in state.results],
-            "summary": state.summary,
+            "summary": state.summary or {
+                "execution_mode": state.execution_mode,
+                "execution_order": list(state.execution_order),
+                "advisory": self._execution_mode_advisory(state.execution_mode),
+            },
             "latest_error": state.latest_error,
             "events": [event.model_dump(mode="json") for event in state.events],
         }
         now = datetime.now(tz=UTC)
         for result in payload.get("results", []):
-            if result.get("status") == "running" and result.get("started_at"):
-                started_at = _parse_iso(result["started_at"])
+            if result.get("status") == "running" and result.get("execution_start_at"):
+                started_at = _parse_iso(result["execution_start_at"])
                 if started_at is not None:
                     elapsed_ms = max((now - started_at).total_seconds() * 1000, 0)
                     result["elapsed_ms"] = round(elapsed_ms, 2)
                     result["elapsed_human"] = _humanize_duration_ms(elapsed_ms)
+                    result["isolated_duration_live_ms"] = round(elapsed_ms, 2)
+            elif result.get("status") == "waiting":
+                result["elapsed_ms"] = None
+                result["elapsed_human"] = None
         if payload.get("status") == "running" and payload.get("created_at"):
             started_at = _parse_iso(payload["created_at"])
             if started_at is not None:
@@ -363,11 +435,23 @@ class LiveCompareManager:
             "created_at": record.created_at,
             "finished_at": record.finished_at,
             "mode": record.mode,
+            "execution_mode": record.execution_mode,
+            "execution_order": record.execution_order,
             "question_excerpt": (record.question[:117] + "...") if len(record.question) > 120 else record.question,
+            "manual_note": record.manual_note,
             "selected_models": record.selected_models,
             "successful_model_count": record.summary.successful_model_count,
             "failed_model_count": record.summary.failed_model_count,
             "fastest_model_label": record.summary.fastest_model_label,
+            "per_model_durations": [
+                {
+                    "model_id": result.model_id,
+                    "model_label": result.model_label,
+                    "isolated_duration_ms": result.isolated_duration_ms,
+                    "total_elapsed_since_run_start_ms": result.total_elapsed_since_run_start_ms,
+                }
+                for result in record.results
+            ],
         }
         self._history = [history_entry] + [row for row in self._history if row.get("run_id") != record.run_id]
         self._history = self._history[:40]
@@ -397,11 +481,25 @@ class LiveCompareManager:
 
     @staticmethod
     def _default_model_ids(enabled_model_ids: list[str]) -> list[str]:
-        preferred = ["mistral_local", "qwen_local", "openai_reference"]
-        selected = [model_id for model_id in preferred if model_id in enabled_model_ids]
+        selected = [model_id for model_id in DEFAULT_FAIR_ORDER if model_id in enabled_model_ids]
         if len(selected) >= 2:
             return selected[:3]
         return enabled_model_ids[:3]
+
+    def _ordered_selection(self, model_ids: list[str]) -> list[str]:
+        fair_index = {model_id: index for index, model_id in enumerate(DEFAULT_FAIR_ORDER)}
+        return sorted(model_ids, key=lambda model_id: (fair_index.get(model_id, len(DEFAULT_FAIR_ORDER)), model_id))
+
+    @staticmethod
+    def _execution_mode_advisory(execution_mode: CompareExecutionMode) -> str:
+        if execution_mode == "serial":
+            return (
+                "Im seriellen Modus werden Modelle nacheinander ausgefuehrt, damit Laufzeiten auf CPU-lastiger "
+                "lokaler Hardware fair vergleichbar bleiben."
+            )
+        return (
+            "Parallelmodus kann lokale Laufzeiten verfälschen, weil Modelle gleichzeitig um CPU-Ressourcen konkurrieren."
+        )
 
     def _persist_locked(self) -> None:
         json_dump_to_path(self.state_path, self._state_to_dict(self._state), pretty=True)
@@ -428,6 +526,37 @@ class LiveCompareManager:
         except Exception as exc:
             LOGGER.warning("Could not restore live compare history: %s", exc)
             return []
+
+    def _load_presets(self) -> list[LiveComparePreset]:
+        path = self.presets_path
+        if path is None or not path.exists():
+            LOGGER.warning("Live compare presets file not found.")
+            return []
+        try:
+            payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except yaml.YAMLError as exc:
+            LOGGER.warning("Could not load live compare presets: %s", exc)
+            return []
+        preset_rows = payload.get("presets", []) if isinstance(payload, dict) else []
+        presets: list[LiveComparePreset] = []
+        for row in preset_rows:
+            try:
+                presets.append(LiveComparePreset.model_validate(row))
+            except Exception as exc:  # pragma: no cover - guard rail for malformed presets
+                LOGGER.warning("Ignoring invalid live compare preset: %s", exc)
+        return presets
+
+    @staticmethod
+    def _discover_presets_path() -> Path | None:
+        candidates = [
+            Path("/app/fixtures/live_compare/presets.yaml"),
+            Path(__file__).resolve().parents[3] / "fixtures" / "live_compare" / "presets.yaml",
+            Path.cwd() / "fixtures" / "live_compare" / "presets.yaml",
+        ]
+        for path in candidates:
+            if path.exists():
+                return path
+        return candidates[0]
 
 
 def _parse_iso(value: str) -> datetime | None:
