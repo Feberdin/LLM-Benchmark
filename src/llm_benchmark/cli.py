@@ -126,6 +126,7 @@ def doctor_command(
 
     configure_logging(os.getenv("LOG_LEVEL", "INFO"), debug=debug)
     issues: list[str] = []
+    warnings: list[str] = []
     benchmark_config = None
 
     try:
@@ -164,11 +165,26 @@ def doctor_command(
             issues.append(
                 "Missing required API key environment variables: " + ", ".join(sorted(set(missing_keys)))
             )
+        reasoning_hint_models = [
+            model.label
+            for model in benchmark_config.enabled_models()
+            if model.needs_reasoning_control_hint()
+        ]
+        if reasoning_hint_models:
+            warnings.append(
+                "Thinking-model hint: "
+                + ", ".join(reasoning_hint_models)
+                + " may return only reasoning text on Ollama's OpenAI-compatible endpoint unless you set "
+                "`default_parameters.reasoning_effort: none` (or `default_parameters.reasoning.effort: none`)."
+            )
 
     if issues:
         for issue in issues:
             typer.secho(f"Doctor issue: {issue}", fg=typer.colors.YELLOW)
         raise typer.Exit(code=1)
+
+    for warning in warnings:
+        typer.secho(f"Doctor warning: {warning}", fg=typer.colors.YELLOW)
 
     typer.secho("Doctor checks passed.", fg=typer.colors.GREEN)
 

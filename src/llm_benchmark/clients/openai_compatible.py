@@ -369,8 +369,9 @@ class OpenAICompatibleClient:
             return (
                 "Provider returned no assistant content or tool calls, but did include reasoning text. "
                 "This often happens with thinking-capable local models when the completion budget is consumed "
-                "before the final answer is emitted. Increase max_output_tokens or disable reasoning in "
-                "model-specific default_parameters when the backend supports it."
+                "before the final answer is emitted. Increase max_output_tokens or set "
+                "`default_parameters.reasoning_effort` to `none` (or `default_parameters.reasoning.effort` to `none`) "
+                "when the backend supports OpenAI-compatible reasoning controls."
                 f"{suffix}"
             )
         return f"Provider returned no assistant content or tool calls.{suffix}"

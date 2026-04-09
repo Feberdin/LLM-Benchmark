@@ -53,6 +53,9 @@ models:
     model_name: "qwen3.5:35b-a3b"
     enabled: true
     default_parameters:
+      # On Ollama's OpenAI-compatible endpoint, disable reasoning for compact benchmark prompts
+      # so the model returns assistant content instead of consuming the budget in `reasoning`.
+      reasoning_effort: "none"
       temperature: 0.0
       top_p: 1.0
     timeout_seconds: 240

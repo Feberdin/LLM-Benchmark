@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from llm_benchmark.config.loader import filter_test_cases_by_suite, load_config, load_test_cases
+from llm_benchmark.config.models import BenchmarkModelConfig
 from llm_benchmark.domain.result import UnifiedResponse
 from llm_benchmark.domain.test_case import TestCaseDefinition
 from llm_benchmark.validation.service import ResponseValidator
@@ -57,6 +58,8 @@ def test_unraid_config_accepts_alias_api_types() -> None:
     config = load_config(FIXTURES_DIR / "config" / "config.unraid.example.yaml")
 
     assert [model.api_type for model in config.models] == ["openai_compatible", "openai_compatible", "openai"]
+    qwen_model = next(model for model in config.models if model.id == "qwen_local")
+    assert qwen_model.default_parameters["reasoning_effort"] == "none"
 
 
 def test_validator_accepts_valid_json_payload() -> None:
@@ -185,3 +188,31 @@ def test_validator_accepts_any_of_reference_keyword_group() -> None:
     assert outcome.passed is True
     assert outcome.metrics["quality_checks_total"] == 1
     assert outcome.metrics["quality_checks_passed"] == 1
+
+
+def test_qwen_model_without_reasoning_control_gets_hint() -> None:
+    model = BenchmarkModelConfig.model_validate(
+        {
+            "id": "qwen-local",
+            "label": "Qwen Local",
+            "provider": "local",
+            "base_url": "http://localhost:11434/v1",
+            "api_type": "openai_compatible",
+            "model_name": "qwen3.5:35b-a3b",
+            "default_parameters": {"temperature": 0.0},
+        }
+    )
+    controlled_model = BenchmarkModelConfig.model_validate(
+        {
+            "id": "qwen-local-controlled",
+            "label": "Qwen Local Controlled",
+            "provider": "local",
+            "base_url": "http://localhost:11434/v1",
+            "api_type": "openai_compatible",
+            "model_name": "qwen3.5:35b-a3b",
+            "default_parameters": {"temperature": 0.0, "reasoning_effort": "none"},
+        }
+    )
+
+    assert model.needs_reasoning_control_hint() is True
+    assert controlled_model.needs_reasoning_control_hint() is False

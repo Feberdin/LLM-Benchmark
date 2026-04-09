@@ -75,6 +75,9 @@ models:
     model_name: "${QWEN_MODEL_NAME:-qwen3.5:35b-a3b}"
     enabled: true
     default_parameters:
+      # Qwen thinking models on Ollama's OpenAI-compatible endpoint can otherwise spend the whole
+      # completion budget on `reasoning` and return an empty `content` field.
+      reasoning_effort: "none"
       temperature: 0.0
       top_p: 1.0
     timeout_seconds: 300

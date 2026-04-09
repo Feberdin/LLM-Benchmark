@@ -302,6 +302,18 @@ class DashboardRunManager:
                         + ", ".join(missing_keys)
                         + ". Die betroffenen Modelle werden wahrscheinlich fehlschlagen."
                     )
+                reasoning_hint_models = [
+                    model.label
+                    for model in benchmark_config.enabled_models()
+                    if model.needs_reasoning_control_hint()
+                ]
+                if reasoning_hint_models:
+                    warnings.append(
+                        "Thinking-Model-Hinweis: "
+                        + ", ".join(reasoning_hint_models)
+                        + " kann auf Ollamas OpenAI-kompatiblem Endpoint nur Reasoning-Text liefern, "
+                        "wenn kein `reasoning_effort: none` gesetzt ist."
+                    )
             except Exception as exc:
                 errors.append(f"Konfiguration konnte nicht geladen werden: {exc}")
 

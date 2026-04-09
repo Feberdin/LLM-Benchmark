@@ -35,6 +35,12 @@ Das integrierte Dashboard laeuft im selben Container und nutzt denselben Benchma
 
 Vor dem eigentlichen Benchmark kann das Dashboard ausserdem per Button einen leichten LLM-Erreichbarkeits-Check ausfuehren. Dieser prueft fuer alle aktiven Modelle den OpenAI-kompatiblen `/models`-Endpunkt, inklusive Auth und Sichtbarkeit des konfigurierten Modellnamens.
 
+Wichtiger Praxis-Hinweis fuer Qwen auf Ollama:
+
+- Wenn ein Qwen-Thinking-Modell ueber Ollamas OpenAI-kompatible `/v1/chat/completions`-Route angebunden wird, sollte in der Modellkonfiguration fuer produktionsnahe Benchmarks meist `default_parameters.reasoning_effort: "none"` gesetzt werden.
+- Sonst kann der Endpoint bei kleineren `max_tokens`-Budgets nur `reasoning` liefern und ein leeres Assistant-`content` zurueckgeben.
+- Das Benchmark-Tool erkennt diesen Fall inzwischen explizit als `empty_assistant_content`, statt ihn still als normalen Validierungsfehler zu behandeln.
+
 Verfuegbare Routen:
 
 - `/dashboard`

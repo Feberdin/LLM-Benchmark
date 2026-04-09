@@ -125,6 +125,36 @@ class BenchmarkModelConfig(BaseModel):
 
         return self.timeout_seconds or default_timeout_seconds
 
+    def has_reasoning_effort_control(self) -> bool:
+        """
+        Return whether the model already declares an explicit OpenAI-compatible reasoning control.
+
+        Why this exists:
+        Some local thinking models on Ollama can emit only reasoning text when no reasoning budget
+        policy is configured. We keep the detection explicit so doctor/preflight can guide operators.
+        """
+
+        if "reasoning_effort" in self.default_parameters:
+            return True
+        reasoning = self.default_parameters.get("reasoning")
+        return isinstance(reasoning, dict) and reasoning.get("effort") is not None
+
+    def needs_reasoning_control_hint(self) -> bool:
+        """
+        Flag common local thinking-model setups that benefit from explicit reasoning control.
+
+        Example:
+        - `qwen3.5:35b-a3b` behind Ollama `/v1/chat/completions`
+        - no `reasoning_effort` configured
+        """
+
+        if self.has_reasoning_effort_control():
+            return False
+        if self.api_type not in {"openai", "openai_compatible", "openai_chat_completions"}:
+            return False
+        model_name = self.model_name.lower()
+        return "qwen" in model_name
+
 
 class BenchmarkConfig(BaseModel):
     """Top-level benchmark configuration file."""
