@@ -510,6 +510,169 @@ pre {
   padding: 28px;
 }
 
+textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(10, 15, 25, 0.92);
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 120px;
+}
+
+.live-compare-hero {
+  margin-bottom: 18px;
+}
+
+.compare-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.compare-field {
+  display: grid;
+  gap: 8px;
+}
+
+.compare-field-wide {
+  grid-column: 1 / -1;
+}
+
+.compare-config-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.compare-actions {
+  max-width: 420px;
+}
+
+.model-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.model-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.model-chip {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(10, 15, 25, 0.52);
+  border: 1px solid rgba(42, 53, 88, 0.7);
+  cursor: pointer;
+}
+
+.model-chip input {
+  width: auto;
+  margin: 0;
+}
+
+.model-chip small {
+  display: block;
+  color: var(--text-muted);
+}
+
+.compare-summary-grid {
+  margin-bottom: 18px;
+}
+
+.live-compare-grid {
+  --compare-columns: 3;
+  display: grid;
+  grid-template-columns: repeat(var(--compare-columns), minmax(0, 1fr));
+  gap: 16px;
+}
+
+.compare-card,
+.compare-empty-state,
+.compare-error-card {
+  padding: 18px;
+  border-radius: var(--radius);
+  background: rgba(10, 15, 25, 0.58);
+  border: 1px solid rgba(42, 53, 88, 0.9);
+}
+
+.compare-card {
+  display: grid;
+  gap: 14px;
+  min-height: 560px;
+}
+
+.compare-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: start;
+}
+
+.compare-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.compare-metrics div,
+.compare-time-row span {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(18, 24, 43, 0.78);
+  border: 1px solid rgba(42, 53, 88, 0.7);
+}
+
+.compare-metrics strong,
+.compare-time-row strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-primary);
+}
+
+.compare-time-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.compare-response-shell {
+  min-height: 260px;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.compare-toggle details,
+.compare-error-card details,
+details.compare-toggle {
+  margin-top: 12px;
+}
+
+.compare-toggle summary,
+.compare-error-card summary {
+  cursor: pointer;
+  color: var(--cyan);
+  font-weight: 700;
+}
+
+.compare-error-card {
+  background: rgba(255, 106, 139, 0.08);
+  border-color: rgba(255, 106, 139, 0.24);
+}
+
+.compare-empty-state {
+  grid-column: 1 / -1;
+}
+
+.live-compare-secondary {
+  align-items: start;
+}
+
 @media (max-width: 1100px) {
   .filters-grid,
   .metric-grid,
@@ -517,7 +680,12 @@ pre {
   .details-grid,
   .run-form,
   .run-facts,
-  .run-meta-grid {
+  .run-meta-grid,
+  .compare-config-grid,
+  .model-picker-grid,
+  .live-compare-grid,
+  .compare-metrics,
+  .compare-time-row {
     grid-template-columns: 1fr;
   }
 

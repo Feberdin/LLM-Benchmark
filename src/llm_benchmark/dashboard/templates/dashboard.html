@@ -37,6 +37,7 @@
         {% for value, label in view_options %}
           <a class="nav-pill {% if filters.view == value %}active{% endif %}" href="/dashboard?view={{ value }}">{{ label }}</a>
         {% endfor %}
+        <a class="nav-pill" href="/live-compare">Live Compare</a>
       </nav>
 
       <section class="panel two-column run-layout">

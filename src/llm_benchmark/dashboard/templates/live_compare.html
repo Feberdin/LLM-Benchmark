@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="/static/dashboard.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Feberdin Benchmark Control</p>
+          <h1>{{ page_title }}</h1>
+          <p class="hero-copy">
+            Drei Modelle direkt nebeneinander vergleichen, mit derselben Frage, denselben Parametern und derselben
+            Transportlogik wie im Benchmark-Backend.
+          </p>
+        </div>
+        <div class="hero-meta">
+          <div class="meta-card">
+            <span>Modelle</span>
+            <strong>{{ live_compare_payload.available_models | length }}</strong>
+          </div>
+          <div class="meta-card">
+            <span>Default</span>
+            <strong>{{ live_compare_payload.default_models | join(", ") }}</strong>
+          </div>
+          <div class="meta-card">
+            <span>Letzter Compare</span>
+            <strong>{{ live_compare_payload.state.finished_at or live_compare_payload.state.created_at or "n/a" }}</strong>
+          </div>
+        </div>
+      </header>
+
+      <nav class="top-nav">
+        {% for value, label in view_options %}
+          <a class="nav-pill" href="/dashboard?view={{ value }}">{{ label }}</a>
+        {% endfor %}
+        <a class="nav-pill active" href="/live-compare">Live Compare</a>
+      </nav>
+
+      <section class="panel-card live-compare-hero">
+        <div class="row-head">
+          <div>
+            <span class="status-badge accent">Live Compare</span>
+            <h2>Direkter Modellvergleich fuer echte Alltagsfragen</h2>
+          </div>
+          <span id="live-compare-status-badge" class="status-badge neutral">{{ live_compare_payload.state.status }}</span>
+        </div>
+        <p class="muted">
+          Diese Ansicht startet keinen Benchmark-Testfall, sondern sendet exakt dieselbe Eingabe direkt an die
+          ausgewaehlten Modelle. So kannst du Antwortstil, Geschwindigkeit und Fehlerverhalten nebeneinander sehen.
+        </p>
+
+        <form id="live-compare-form" class="compare-form">
+          <label class="compare-field compare-field-wide">
+            <span>Frage / Prompt</span>
+            <textarea
+              id="live-question"
+              name="question"
+              rows="5"
+              placeholder="Welche Ursache ist in diesem Log am wahrscheinlichsten und was sollte ich zuerst pruefen?"
+            ></textarea>
+          </label>
+
+          <label class="compare-field compare-field-wide">
+            <span>Optionaler System-Prompt</span>
+            <textarea
+              id="live-system-prompt"
+              name="system_prompt"
+              rows="3"
+              placeholder="Antworte knapp, sachlich und nenne Unsicherheiten explizit."
+            ></textarea>
+          </label>
+
+          <div class="compare-config-grid">
+            <label class="compare-field">
+              <span>Modus</span>
+              <select id="live-mode" name="mode">
+                {% for mode in live_compare_payload.modes %}
+                  <option value="{{ mode.value }}">{{ mode.label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="compare-field">
+              <span>Max Tokens</span>
+              <input id="live-max-tokens" name="max_tokens" type="number" min="16" max="32000" value="600" />
+            </label>
+            <label class="compare-field">
+              <span>Temperature</span>
+              <input id="live-temperature" name="temperature" type="number" min="0" max="2" step="0.1" value="0.0" />
+            </label>
+            <label class="compare-field">
+              <span>Top P</span>
+              <input id="live-top-p" name="top_p" type="number" min="0" max="1" step="0.1" value="1.0" />
+            </label>
+          </div>
+
+          <div class="model-picker">
+            <span>Modelle</span>
+            <div class="model-picker-grid">
+              {% for model in live_compare_payload.available_models %}
+                <label class="model-chip">
+                  <input
+                    type="checkbox"
+                    name="models"
+                    value="{{ model.model_id }}"
+                    {% if model.model_id in live_compare_payload.default_models %}checked{% endif %}
+                  />
+                  <span>{{ model.model_label }}</span>
+                  <small>{{ model.provider }} · {{ model.model_name }}</small>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="action-row compare-actions">
+            <button id="live-compare-submit" type="submit" class="primary-button">Alle 3 vergleichen</button>
+            <button id="live-compare-reset" type="button" class="secondary-button">Reset</button>
+          </div>
+        </form>
+
+        <div id="live-compare-message" class="inline-message hidden"></div>
+      </section>
+
+      <section class="metric-grid compare-summary-grid">
+        <article class="metric-card accent-pink">
+          <span>Run ID</span>
+          <strong id="summary-run-id">{{ live_compare_payload.state.run_id or "n/a" }}</strong>
+          <small id="summary-run-status">{{ live_compare_payload.state.status }}</small>
+        </article>
+        <article class="metric-card accent-cyan">
+          <span>Schnellstes Modell</span>
+          <strong id="summary-fastest">{{ live_compare_payload.state.summary.fastest_model_label if live_compare_payload.state.summary else "n/a" }}</strong>
+          <small id="summary-fastest-id">{{ live_compare_payload.state.summary.fastest_model_id if live_compare_payload.state.summary else "-" }}</small>
+        </article>
+        <article class="metric-card accent-orange">
+          <span>Laengste Antwort</span>
+          <strong id="summary-longest">{{ live_compare_payload.state.summary.longest_response_model_label if live_compare_payload.state.summary else "n/a" }}</strong>
+          <small id="summary-success-fail">{{ (live_compare_payload.state.summary.successful_model_count|string ~ " ok / " ~ live_compare_payload.state.summary.failed_model_count|string ~ " fail") if live_compare_payload.state.summary else "-" }}</small>
+        </article>
+        <article class="metric-card accent-purple">
+          <span>Letzter Fehler</span>
+          <strong id="summary-latest-error">{{ live_compare_payload.state.latest_error or "kein Fehler" }}</strong>
+          <small>Parallel, isoliert, persistent</small>
+        </article>
+      </section>
+
+      <section class="panel-card">
+        <div class="row-head">
+          <div>
+            <span class="status-badge neutral">Antworten</span>
+            <h2>Direktvergleich</h2>
+          </div>
+          <p class="muted" id="live-compare-question-preview">
+            {{ live_compare_payload.state.question or "Noch keine Frage gesendet." }}
+          </p>
+        </div>
+        <div id="live-compare-grid" class="live-compare-grid"></div>
+      </section>
+
+      <section class="panel two-column live-compare-secondary">
+        <article class="panel-card">
+          <div class="row-head">
+            <div>
+              <span class="status-badge neutral">Timeline</span>
+              <h2>Live Compare Verlauf</h2>
+            </div>
+          </div>
+          <ul id="live-compare-events" class="signal-list timeline-list">
+            {% for event in live_compare_payload.state.events %}
+              <li>
+                <span class="status-badge {{ 'success' if event.level == 'success' else 'danger' if event.level == 'error' else 'warning' if event.level == 'warning' else 'neutral' }}">
+                  {{ event.level }}
+                </span>
+                <p><strong>{{ event.timestamp }}</strong> {{ event.summary }}</p>
+              </li>
+            {% else %}
+              <li><p>Nach dem ersten Vergleich erscheinen hier die Einzelschritte je Modell.</p></li>
+            {% endfor %}
+          </ul>
+        </article>
+
+        <article class="panel-card">
+          <div class="row-head">
+            <div>
+              <span class="status-badge neutral">Historie</span>
+              <h2>Fruehere Vergleiche</h2>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table id="live-compare-history-table">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Zeit</th>
+                  <th>Modus</th>
+                  <th>Frage</th>
+                  <th>Modelle</th>
+                  <th>Aktion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in live_compare_payload.history %}
+                  <tr>
+                    <td>{{ row.status }}</td>
+                    <td>{{ row.created_at }}</td>
+                    <td>{{ row.mode }}</td>
+                    <td>{{ row.question_excerpt }}</td>
+                    <td>{{ row.selected_models | join(", ") }}</td>
+                    <td><button type="button" class="secondary-button history-load-button" data-run-id="{{ row.run_id }}">Laden</button></td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="6">Noch keine Live-Compare-Historie vorhanden.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <script>
+      const initialLiveComparePayload = {{ live_compare_payload | tojson }};
+      let liveCompareState = initialLiveComparePayload.state;
+      let liveCompareHistory = initialLiveComparePayload.history;
+      let liveComparePollHandle = null;
+
+      function badgeClassFromStatus(status) {
+        if (status === "success" || status === "succeeded") return "success";
+        if (status === "warning" || status === "partial") return "warning";
+        if (status === "error" || status === "failed") return "danger";
+        if (status === "running" || status === "queued") return "warning";
+        return "neutral";
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll("\"", "&quot;");
+      }
+
+      function formatMetric(value, suffix = "") {
+        if (value === null || value === undefined || value === "") return "n/a";
+        return `${value}${suffix}`;
+      }
+
+      function setMessage(text, level = "neutral") {
+        const node = document.getElementById("live-compare-message");
+        if (!text) {
+          node.className = "inline-message hidden";
+          node.textContent = "";
+          return;
+        }
+        node.className = `inline-message ${level === "error" ? "danger-alert" : level === "warning" ? "warning-alert" : ""}`;
+        node.textContent = text;
+      }
+
+      function buildResponseCard(result) {
+        const responseText = result.response_text || "";
+        const responseJson = result.response_json ? JSON.stringify(result.response_json, null, 2) : "";
+        const validationBadge = result.validation_passed === null
+          ? ""
+          : `<span class="status-badge ${result.validation_passed ? "success" : "warning"}">validation ${result.validation_passed ? "passed" : "failed"}</span>`;
+
+        const detailsHtml = result.error_message
+          ? `
+            <div class="compare-error-card">
+              <strong>${escapeHtml(result.error_type || "error")}</strong>
+              <p>${escapeHtml(result.error_message)}</p>
+              ${Object.keys(result.technical_details || {}).length ? `
+                <details>
+                  <summary>Technische Details</summary>
+                  <pre>${escapeHtml(JSON.stringify(result.technical_details, null, 2))}</pre>
+                </details>
+              ` : ""}
+            </div>
+          `
+          : "";
+
+        const jsonHtml = responseJson
+          ? `
+            <details class="compare-toggle">
+              <summary>Antwort als JSON anzeigen</summary>
+              <pre>${escapeHtml(responseJson)}</pre>
+            </details>
+          `
+          : "";
+
+        return `
+          <article class="compare-card">
+            <header class="compare-card-head">
+              <div>
+                <span class="status-badge ${badgeClassFromStatus(result.status)}">${escapeHtml(result.status)}</span>
+                ${validationBadge}
+                <h2>${escapeHtml(result.model_label)}</h2>
+                <p class="muted">${escapeHtml(result.provider)} · ${escapeHtml(result.model_name)}</p>
+              </div>
+              <button
+                type="button"
+                class="secondary-button compare-copy-button"
+                data-response="${encodeURIComponent(responseText)}"
+                ${responseText ? "" : "disabled"}
+              >
+                Copy
+              </button>
+            </header>
+
+            <div class="compare-metrics">
+              <div><span>Status</span><strong>${escapeHtml(result.success === null ? result.status : result.success ? "success" : "failed")}</strong></div>
+              <div><span>Dauer</span><strong>${escapeHtml(result.duration_human || formatMetric(result.duration_ms, " ms"))}</strong></div>
+              <div><span>TTFT</span><strong>${escapeHtml(formatMetric(result.ttft_ms, " ms"))}</strong></div>
+              <div><span>TPS</span><strong>${escapeHtml(formatMetric(result.tokens_per_second))}</strong></div>
+              <div><span>Input</span><strong>${escapeHtml(formatMetric(result.input_tokens))}</strong></div>
+              <div><span>Output</span><strong>${escapeHtml(formatMetric(result.output_tokens))}</strong></div>
+              <div><span>HTTP</span><strong>${escapeHtml(formatMetric(result.http_status))}</strong></div>
+              <div><span>Finish</span><strong>${escapeHtml(result.finish_reason || "n/a")}</strong></div>
+            </div>
+
+            <div class="compare-time-row">
+              <span>Start <strong>${escapeHtml(result.started_at || "n/a")}</strong></span>
+              <span>Ende <strong>${escapeHtml(result.finished_at || "n/a")}</strong></span>
+              <span>Laufzeit <strong>${escapeHtml(result.elapsed_human || result.duration_human || "n/a")}</strong></span>
+            </div>
+
+            ${detailsHtml}
+
+            <div class="compare-response-shell">
+              <pre>${escapeHtml(responseText || "Noch keine Antwort vorhanden.")}</pre>
+            </div>
+            ${jsonHtml}
+          </article>
+        `;
+      }
+
+      function renderSummary(state) {
+        const summary = state.summary || {};
+        document.getElementById("summary-run-id").textContent = state.run_id || "n/a";
+        document.getElementById("summary-run-status").textContent = state.status || "idle";
+        document.getElementById("summary-fastest").textContent = summary.fastest_model_label || "n/a";
+        document.getElementById("summary-fastest-id").textContent = summary.fastest_model_id || "-";
+        document.getElementById("summary-longest").textContent = summary.longest_response_model_label || "n/a";
+        document.getElementById("summary-success-fail").textContent = `${summary.successful_model_count || 0} ok / ${summary.failed_model_count || 0} fail`;
+        document.getElementById("summary-latest-error").textContent = state.latest_error || "kein Fehler";
+        const badge = document.getElementById("live-compare-status-badge");
+        badge.className = `status-badge ${badgeClassFromStatus(state.status)}`;
+        badge.textContent = state.status || "idle";
+        document.getElementById("live-compare-question-preview").textContent = state.question || "Noch keine Frage gesendet.";
+      }
+
+      function renderEvents(state) {
+        const container = document.getElementById("live-compare-events");
+        const events = state.events || [];
+        if (!events.length) {
+          container.innerHTML = "<li><p>Nach dem ersten Vergleich erscheinen hier die Einzelschritte je Modell.</p></li>";
+          return;
+        }
+        container.innerHTML = events.map((event) => `
+          <li>
+            <span class="status-badge ${badgeClassFromStatus(event.level)}">${escapeHtml(event.level)}</span>
+            <p><strong>${escapeHtml(event.timestamp)}</strong> ${escapeHtml(event.summary)}</p>
+          </li>
+        `).join("");
+      }
+
+      function renderHistory(history) {
+        const body = document.querySelector("#live-compare-history-table tbody");
+        if (!history.length) {
+          body.innerHTML = "<tr><td colspan='6'>Noch keine Live-Compare-Historie vorhanden.</td></tr>";
+          return;
+        }
+        body.innerHTML = history.map((row) => `
+          <tr>
+            <td>${escapeHtml(row.status)}</td>
+            <td>${escapeHtml(row.created_at)}</td>
+            <td>${escapeHtml(row.mode)}</td>
+            <td>${escapeHtml(row.question_excerpt)}</td>
+            <td>${escapeHtml((row.selected_models || []).join(", "))}</td>
+            <td><button type="button" class="secondary-button history-load-button" data-run-id="${escapeHtml(row.run_id)}">Laden</button></td>
+          </tr>
+        `).join("");
+      }
+
+      function renderCompareGrid(state) {
+        const grid = document.getElementById("live-compare-grid");
+        const results = state.results || [];
+        const columnCount = Math.max(1, Math.min(4, results.length || 3));
+        grid.style.setProperty("--compare-columns", columnCount);
+        if (!results.length) {
+          grid.innerHTML = `
+            <article class="compare-empty-state">
+              <h2>Noch kein Live Compare gestartet</h2>
+              <p>Gib oben eine echte Frage ein und vergleiche Mistral, Qwen und OpenAI direkt nebeneinander.</p>
+            </article>
+          `;
+          return;
+        }
+        grid.innerHTML = results.map((result) => buildResponseCard(result)).join("");
+      }
+
+      function renderState(payload) {
+        liveCompareState = payload;
+        renderSummary(payload);
+        renderCompareGrid(payload);
+        renderEvents(payload);
+      }
+
+      async function fetchCurrentState() {
+        const response = await fetch("/api/dashboard/live-compare/current");
+        if (!response.ok) {
+          throw new Error("Live-Compare-Status konnte nicht geladen werden.");
+        }
+        return response.json();
+      }
+
+      async function fetchHistory() {
+        const response = await fetch("/api/dashboard/live-compare/history");
+        if (!response.ok) {
+          throw new Error("Live-Compare-Historie konnte nicht geladen werden.");
+        }
+        return response.json();
+      }
+
+      async function refreshLiveCompare() {
+        try {
+          const [state, history] = await Promise.all([fetchCurrentState(), fetchHistory()]);
+          renderState(state);
+          liveCompareHistory = history;
+          renderHistory(history);
+          if (!["queued", "running"].includes(state.status)) {
+            stopPolling();
+          }
+        } catch (error) {
+          setMessage(error.message || "Live-Compare-Status konnte nicht aktualisiert werden.", "error");
+          stopPolling();
+        }
+      }
+
+      function startPolling() {
+        stopPolling();
+        liveComparePollHandle = window.setInterval(refreshLiveCompare, 1200);
+      }
+
+      function stopPolling() {
+        if (liveComparePollHandle) {
+          window.clearInterval(liveComparePollHandle);
+          liveComparePollHandle = null;
+        }
+      }
+
+      async function startLiveCompare(event) {
+        event.preventDefault();
+        const selectedModels = Array.from(document.querySelectorAll("input[name='models']:checked")).map((node) => node.value);
+        if (selectedModels.length < 2) {
+          setMessage("Bitte waehle mindestens zwei Modelle fuer den direkten Vergleich aus.", "warning");
+          return;
+        }
+
+        const payload = {
+          question: document.getElementById("live-question").value.trim(),
+          system_prompt: document.getElementById("live-system-prompt").value.trim(),
+          models: selectedModels,
+          mode: document.getElementById("live-mode").value,
+          max_tokens: Number(document.getElementById("live-max-tokens").value),
+          temperature: Number(document.getElementById("live-temperature").value),
+          top_p: Number(document.getElementById("live-top-p").value),
+        };
+
+        if (!payload.question) {
+          setMessage("Bitte gib zuerst eine Frage oder einen Prompt ein.", "warning");
+          return;
+        }
+
+        setMessage("Live Compare wird gestartet...", "neutral");
+        try {
+          const response = await fetch("/api/dashboard/live-compare", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const bodyText = await response.text();
+          let data = {};
+          try {
+            data = bodyText ? JSON.parse(bodyText) : {};
+          } catch (error) {
+            throw new Error(bodyText || "Live Compare konnte nicht gestartet werden.");
+          }
+
+          if (!response.ok) {
+            throw new Error(data.detail || "Live Compare konnte nicht gestartet werden.");
+          }
+
+          renderState(data);
+          setMessage("Live Compare wurde gestartet und wird jetzt live aktualisiert.");
+          startPolling();
+        } catch (error) {
+          setMessage(error.message || "Live Compare konnte nicht gestartet werden.", "error");
+        }
+      }
+
+      async function loadHistoryRun(runId) {
+        try {
+          const response = await fetch(`/api/dashboard/live-compare/${encodeURIComponent(runId)}`);
+          if (!response.ok) {
+            throw new Error("Historischer Compare-Lauf konnte nicht geladen werden.");
+          }
+          const payload = await response.json();
+          renderState(payload);
+          setMessage(`Historischer Lauf ${runId} wurde geladen.`);
+        } catch (error) {
+          setMessage(error.message || "Historischer Compare-Lauf konnte nicht geladen werden.", "error");
+        }
+      }
+
+      document.getElementById("live-compare-form").addEventListener("submit", startLiveCompare);
+      document.getElementById("live-compare-reset").addEventListener("click", () => {
+        document.getElementById("live-question").value = "";
+        document.getElementById("live-system-prompt").value = "";
+        document.getElementById("live-mode").value = "chat";
+        document.getElementById("live-max-tokens").value = "600";
+        document.getElementById("live-temperature").value = "0.0";
+        document.getElementById("live-top-p").value = "1.0";
+        document.querySelectorAll("input[name='models']").forEach((node) => {
+          node.checked = initialLiveComparePayload.default_models.includes(node.value);
+        });
+        setMessage("");
+      });
+
+      document.addEventListener("click", async (event) => {
+        const copyButton = event.target.closest(".compare-copy-button");
+        if (copyButton) {
+          const text = decodeURIComponent(copyButton.dataset.response || "");
+          if (!text) return;
+          await navigator.clipboard.writeText(text);
+          setMessage("Antwort wurde in die Zwischenablage kopiert.");
+          return;
+        }
+
+        const historyButton = event.target.closest(".history-load-button");
+        if (historyButton) {
+          await loadHistoryRun(historyButton.dataset.runId);
+        }
+      });
+
+      renderState(liveCompareState);
+      renderHistory(liveCompareHistory);
+      if (["queued", "running"].includes(liveCompareState.status)) {
+        startPolling();
+      }
+    </script>
+  </body>
+</html>

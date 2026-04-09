@@ -15,6 +15,8 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from llm_benchmark.domain.live_compare import LiveCompareRequest
+from llm_benchmark.dashboard.live_compare_manager import LiveCompareManager
 from llm_benchmark.dashboard.run_manager import DashboardRunManager
 from llm_benchmark.dashboard.service import DashboardFilters, DashboardService
 
@@ -30,6 +32,7 @@ def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Pat
     )
     service = DashboardService(results_dir=results_dir, tests_dir=tests_dir)
     run_manager = DashboardRunManager(config_path=config_path, tests_dir=tests_dir, results_dir=results_dir)
+    live_compare_manager = LiveCompareManager(config_path=config_path, results_dir=results_dir)
     package_root = Path(__file__).resolve().parent
     template_env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(package_root / "templates")),
@@ -50,6 +53,7 @@ def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Pat
         current_payload = run_manager.current_payload(include_preflight=False)
         payload["run_status"] = current_payload.get("state", {}).get("status")
         payload["connectivity_status"] = current_payload.get("connectivity", {}).get("status")
+        payload["live_compare_status"] = live_compare_manager.current_payload().get("status")
         return JSONResponse(payload)
 
     @app.get("/dashboard")
@@ -81,6 +85,14 @@ def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Pat
         context["run_history"] = run_payload["history"]
         context["connectivity"] = run_payload["connectivity"]
         template = template_env.get_template("dashboard.html")
+        return HTMLResponse(template.render(request=request, **context))
+
+    @app.get("/live-compare")
+    async def live_compare(request: Request) -> HTMLResponse:
+        context = service.build_dashboard_context(DashboardFilters(view="overview"))
+        context["page_title"] = "LLM Live Compare"
+        context["live_compare_payload"] = live_compare_manager.page_payload()
+        template = template_env.get_template("live_compare.html")
         return HTMLResponse(template.render(request=request, **context))
 
     @app.get("/api/dashboard/summary")
@@ -134,6 +146,31 @@ def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Pat
     @app.get("/api/dashboard/domain")
     async def api_domain() -> JSONResponse:
         return JSONResponse(service.api_domains())
+
+    @app.get("/api/dashboard/live-compare/current")
+    async def api_live_compare_current() -> JSONResponse:
+        return JSONResponse(live_compare_manager.current_payload())
+
+    @app.get("/api/dashboard/live-compare/history")
+    async def api_live_compare_history() -> JSONResponse:
+        return JSONResponse(live_compare_manager.history_payload())
+
+    @app.get("/api/dashboard/live-compare/{run_id}")
+    async def api_live_compare_run(run_id: str) -> JSONResponse:
+        try:
+            return JSONResponse(live_compare_manager.run_payload(run_id))
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Live compare run not found.") from exc
+
+    @app.post("/api/dashboard/live-compare")
+    async def api_live_compare_start(payload: LiveCompareRequest) -> JSONResponse:
+        try:
+            response = live_compare_manager.start_compare(payload.model_dump(mode="json"))
+            return JSONResponse(response, status_code=202)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/api/dashboard/tests")
     async def api_tests(

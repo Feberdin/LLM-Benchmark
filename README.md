@@ -24,6 +24,7 @@ Das Tool hostet diese Modelle nicht selbst. Es arbeitet als zentraler Benchmark-
 - Exportiert Aggregationen als CSV, Markdown, HTML, `final_report.json` und `analysis_input.json`.
 - Liefert ein integriertes Web-Dashboard auf Basis derselben Ergebnisdateien.
 - Kann Benchmarks direkt aus dem Dashboard starten und den Fortschritt mit Timeline, Status und Historie anzeigen.
+- Enthält eine Live-Compare-Ansicht fuer den direkten Antwortvergleich von 2 bis 4 Modellen mit Default auf Mistral, Qwen und OpenAI.
 - Zeigt projektbezogene Empfehlungen fuer SecondBrain, secondbrain-voice-gateway und Paperless-KIplus.
 - Arbeitet robust weiter, auch wenn einzelne Endpunkte fehlschlagen, timeouts produzieren oder keine Token-Metriken liefern.
 - Ist fuer Unraid-Mounts mit `/config`, `/app/tests` und `/app/results` vorbereitet.
@@ -32,6 +33,8 @@ Das Tool hostet diese Modelle nicht selbst. Es arbeitet als zentraler Benchmark-
 ## Dashboard
 
 Das integrierte Dashboard laeuft im selben Container und nutzt denselben Benchmark-Pfad wie die CLI. Es liest die vorhandenen Ergebnisdateien direkt, kann aber zusaetzlich kontrolliert einen neuen Benchmark im Hintergrund starten und dessen Status sichtbar machen.
+
+Zusaetzlich gibt es unter `/live-compare` eine interaktive Live-Compare-Ansicht. Sie verwendet dieselben Modellkonfigurationen und denselben OpenAI-kompatiblen Client-Stack wie der Benchmark, sendet aber eine freie Eingabe direkt an die ausgewaehlten Modelle und zeigt die Antworten nebeneinander an.
 
 Vor dem eigentlichen Benchmark kann das Dashboard ausserdem per Button einen leichten LLM-Erreichbarkeits-Check ausfuehren. Dieser prueft fuer alle aktiven Modelle den OpenAI-kompatiblen `/models`-Endpunkt, inklusive Auth und Sichtbarkeit des konfigurierten Modellnamens.
 
@@ -44,6 +47,7 @@ Wichtiger Praxis-Hinweis fuer Qwen auf Ollama:
 Verfuegbare Routen:
 
 - `/dashboard`
+- `/live-compare`
 - `/health`
 - `/api/dashboard/run/current`
 - `/api/dashboard/run/history`
@@ -56,6 +60,10 @@ Verfuegbare Routen:
 - `/api/dashboard/tests`
 - `/api/dashboard/failures`
 - `/api/dashboard/domain`
+- `/api/dashboard/live-compare`
+- `/api/dashboard/live-compare/current`
+- `/api/dashboard/live-compare/history`
+- `/api/dashboard/live-compare/<run_id>`
 - `/downloads/<datei>`
 
 Das Dashboard orientiert sich optisch am Synthwave-/Dark-Design des Feberdin-Templates:
@@ -133,7 +141,7 @@ Das Projekt bleibt bewusst in einer einzigen Architektur:
 6. `reporting`
    Baut CSV-, Markdown-, HTML-, Final-JSON- und Analyse-JSON-Reports.
 7. `dashboard`
-   Serviert das Web-Dashboard direkt aus den vorhandenen Ergebnisdateien und kann optional neue Runs im Hintergrund starten.
+   Serviert das Web-Dashboard direkt aus den vorhandenen Ergebnisdateien, kann neue Runs im Hintergrund starten und bietet zusaetzlich Live Compare fuer direkte Modellantworten.
 
 Wichtige Architekturentscheidung:
 
@@ -330,6 +338,12 @@ Nach einem Lauf entstehen mindestens:
 - `results/final_report.html`
 - `results/analysis_input.json`
 
+Zusaetzlich erzeugt die Live-Compare-Ansicht eigene persistente Dateien unter:
+
+- `results/live_compare/current_state.json`
+- `results/live_compare/history.json`
+- `results/live_compare/runs/<run_id>.json`
+
 ### `final_report.json`
 
 Dieses Artefakt ist fuer Menschen und strukturierte Tools gedacht und enthaelt unter anderem:
@@ -428,6 +442,12 @@ Dashboard starten:
 
 ```bash
 benchmark dashboard --config /config/config.unraid.example.yaml --tests-dir /app/tests --results-dir /app/results --host 0.0.0.0 --port 8080
+```
+
+Live Compare im Browser nutzen:
+
+```text
+http://<host>:8080/live-compare
 ```
 
 ## Docker Quickstart
@@ -551,6 +571,16 @@ Hinweis:
 - `docker run --rm ... run ...` ist weiterhin moeglich, aber unkomfortabler fuer Unraid, weil der Job-Container nach Abschluss sofort verschwindet.
 - Fuer produktiven Betrieb ist `BENCHMARK_ACTION=dashboard` als dauerhafter Container die angenehmere Variante.
 
+### 6a. Live Compare direkt im Dashboard nutzen
+
+1. `http://<unraid-ip>:8080/live-compare` oeffnen.
+2. Oben eine echte Alltagsfrage oder ein Log/Prompt eintragen.
+3. Optional einen kurzen System-Prompt hinterlegen.
+4. Standardmaessig bleiben `Mistral Local`, `Qwen Local` und `OpenAI Reference` aktiviert.
+5. `Alle 3 vergleichen` klicken.
+6. Die drei Antwortkarten zeigen live Status, Dauer, Token-Metriken, Fehler und die eigentliche Antwort.
+7. Fruehere Vergleiche bleiben unter `results/live_compare/` und in der History auf der Seite erhalten.
+
 ### 7. Ergebnisse finden
 
 Die Artefakte liegen unter:
@@ -566,6 +596,8 @@ Besonders wichtig:
 - `final_report.html`
 - `final_report.json`
 - `analysis_input.json`
+- `live_compare/history.json`
+- `live_compare/runs/<run_id>.json`
 
 ### 8. Reports interpretieren
 
@@ -576,6 +608,40 @@ Praktische Reihenfolge:
 3. `Domains` fuer projektbezogene Empfehlungen
 4. `Failures` fuer Timeouts, Schema-Drift und Sicherheitsprobleme
 5. `analysis_input.json`, wenn spaeter ein anderes LLM die Ergebnisse auswerten soll
+6. `Live Compare`, wenn du vor einer echten Modellentscheidung die Antwortqualitaet direkt nebeneinander sehen willst
+
+## Live Compare
+
+Die Live-Compare-Ansicht ist fuer die schnelle Alltagsentscheidung gedacht: "Welches Modell wuerde ich fuer genau diese konkrete Frage bevorzugen?"
+
+Standardmaessig werden diese drei Modelle vorausgewaehlt:
+
+- `Mistral Local`
+- `Qwen Local`
+- `OpenAI Reference`
+
+Die Ansicht zeigt pro Modellspalte:
+
+- Status `waiting`, `running`, `success` oder `failed`
+- Start- und Endzeit
+- `duration_ms` plus lesbare Dauer
+- optional `ttft_ms`
+- optional `input_tokens`, `output_tokens` und `tokens_per_second`
+- HTTP-Status
+- optionale JSON-Vorschau bei strukturierter Antwort
+- kompakte Fehlerkarte mit einklappbaren technischen Details
+
+Persistenz:
+
+- Jeder Live-Compare-Lauf wird als eigenes JSON unter `results/live_compare/runs/` gespeichert.
+- Die History-Liste auf der Seite liest diese lauffaehigen Persistenzdaten wieder ein.
+
+Grenzen der Aussagekraft:
+
+- Live Compare ist absichtlich weniger streng als der Benchmark und bewertet nicht automatisch dieselbe Regeltiefe wie eine Test-Suite.
+- Lokale CPU-Modelle koennen im parallelen Direktvergleich deutlich langsamer sein als bei einem isolierten Einzelrequest.
+- Token- und TTFT-Metriken sind providerabhaengig und nicht bei jedem Endpoint verfuegbar.
+- Ein besonders gutes Live-Compare-Ergebnis ersetzt keine projektspezifische Suite wie `secondbrain`, `voice_gateway` oder `paperless_kiplus`.
 
 ## Wie die projektbezogenen Rankings zu lesen sind
 
