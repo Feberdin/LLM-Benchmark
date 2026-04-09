@@ -61,9 +61,9 @@
               <select id="run-suite-select" name="suite">
                 <option value="all">Alle Testsuiten</option>
                 {% for suite_name in run_preflight.available_suites %}
-                  <option
+                <option
                     value="{{ suite_name }}"
-                    {% if (run_state.suite == suite_name) or (filters.suite == suite_name) %}selected{% endif %}
+                    {% if (run_state.suite == suite_name) or (filters.suite == suite_name) or ((not run_state.suite) and (not filters.suite or filters.suite == 'all') and run_preflight.recommended_suite == suite_name) %}selected{% endif %}
                   >
                     {{ suite_name }}
                   </option>
@@ -168,6 +168,21 @@
             <div class="meta-card">
               <span>Suite</span>
               <strong id="run-suite-label">{{ run_state.suite or "all" }}</strong>
+            </div>
+          </div>
+
+          <div class="run-meta-grid">
+            <div class="meta-card">
+              <span>Aktuelles Modell</span>
+              <strong id="run-current-model">{{ run_state.current_model_label or "n/a" }}</strong>
+            </div>
+            <div class="meta-card">
+              <span>Aktueller Test</span>
+              <strong id="run-current-test">{{ run_state.current_test_case_id or "n/a" }}</strong>
+            </div>
+            <div class="meta-card">
+              <span>Empfohlene Suite</span>
+              <strong>{{ run_preflight.recommended_suite or "n/a" }}</strong>
             </div>
           </div>
 
@@ -747,6 +762,8 @@
         setText("run-started-at", state.started_at || "n/a");
         setText("run-finished-at", state.finished_at || "n/a");
         setText("run-suite-label", state.suite || "all");
+        setText("run-current-model", state.current_model_label || "n/a");
+        setText("run-current-test", state.current_test_case_id || "n/a");
         setText("runs-view-status", state.status);
         setText("runs-view-suite", state.suite || "all");
         setText("runs-view-id", state.benchmark_run_id || "n/a");

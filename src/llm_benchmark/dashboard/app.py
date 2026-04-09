@@ -47,7 +47,7 @@ def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Pat
     @app.get("/health")
     async def health() -> JSONResponse:
         payload = service.health()
-        payload["run_status"] = run_manager.current_payload().get("state", {}).get("status")
+        payload["run_status"] = run_manager.current_payload(include_preflight=False).get("state", {}).get("status")
         return JSONResponse(payload)
 
     @app.get("/dashboard")
@@ -86,7 +86,7 @@ def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Pat
 
     @app.get("/api/dashboard/run/current")
     async def api_run_current(suite: str | None = Query(None)) -> JSONResponse:
-        return JSONResponse(run_manager.current_payload(suite=suite))
+        return JSONResponse(run_manager.current_payload(suite=suite, include_preflight=False))
 
     @app.get("/api/dashboard/run/history")
     async def api_run_history() -> JSONResponse:

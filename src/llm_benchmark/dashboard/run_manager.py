@@ -86,6 +86,7 @@ class DashboardRunManager:
         self.history_path = self.results_dir / "dashboard_run_history.json"
         self._lock = RLock()
         self._active_thread: Thread | None = None
+        self._preflight_cache: dict[str, dict[str, Any]] = {}
         self._state = self._load_state()
         self._history = self._load_history()
         if self._state.status in {"queued", "running"}:
@@ -104,15 +105,16 @@ class DashboardRunManager:
             with self._lock:
                 self._persist_locked()
 
-    def current_payload(self, suite: str | None = None) -> dict[str, Any]:
+    def current_payload(self, suite: str | None = None, *, include_preflight: bool = True) -> dict[str, Any]:
         """Return the current state plus preflight details and recent history for the UI."""
 
         with self._lock:
             state = asdict(self._state)
             history = list(self._history[:12])
+        preflight = self.preflight(suite=suite) if include_preflight else self._cached_preflight(suite=suite)
         return {
             "state": state,
-            "preflight": self.preflight(suite=suite),
+            "preflight": preflight,
             "history": history,
         }
 
@@ -176,6 +178,12 @@ class DashboardRunManager:
         """Validate config, tests and required secrets before a dashboard-triggered run starts."""
 
         normalized_suite = None if not suite or suite == "all" else suite
+        cache_key = normalized_suite or "all"
+        signature = self._preflight_signature()
+        cached = self._preflight_cache.get(cache_key)
+        if cached and cached.get("_signature") == signature:
+            return {key: value for key, value in cached.items() if key != "_signature"}
+
         warnings: list[str] = []
         errors: list[str] = []
         available_suites: list[str] = []
@@ -232,17 +240,21 @@ class DashboardRunManager:
             except Exception as exc:
                 errors.append(f"Tests konnten nicht geladen werden: {exc}")
 
-        return {
+        recommended_suite = self._recommended_suite(available_suites)
+        payload = {
             "config_path": str(self.config_path),
             "tests_dir": str(self.tests_dir),
             "results_dir": str(self.results_dir),
             "available_suites": available_suites,
+            "recommended_suite": recommended_suite,
             "enabled_models": enabled_models,
             "discovered_test_case_count": discovered_test_case_count,
             "selected_test_case_count": selected_test_case_count,
             "warnings": warnings,
             "errors": errors,
         }
+        self._preflight_cache[cache_key] = payload | {"_signature": signature}
+        return payload
 
     def _run_in_background(self, *, run_id: str, suite: str | None) -> None:
         """
@@ -458,6 +470,37 @@ class DashboardRunManager:
 
     def _discover_generated_files(self) -> list[str]:
         return [name for name in REPORT_FILES if (self.results_dir / name).exists()]
+
+    def _cached_preflight(self, *, suite: str | None) -> dict[str, Any]:
+        normalized_suite = None if not suite or suite == "all" else suite
+        cache_key = normalized_suite or "all"
+        cached = self._preflight_cache.get(cache_key)
+        if cached:
+            return {key: value for key, value in cached.items() if key != "_signature"}
+        return self.preflight(suite=normalized_suite)
+
+    def _preflight_signature(self) -> tuple[Any, ...]:
+        config_mtime = self.config_path.stat().st_mtime_ns if self.config_path.exists() else 0
+        tests_mtime = 0
+        if self.tests_dir.exists():
+            for path in self.tests_dir.rglob("*"):
+                if path.is_file():
+                    tests_mtime = max(tests_mtime, path.stat().st_mtime_ns)
+        return (
+            config_mtime,
+            tests_mtime,
+            os.getenv("OPENAI_API_KEY"),
+            os.getenv("MISTRAL_BASE_URL"),
+            os.getenv("QWEN_BASE_URL"),
+        )
+
+    def _recommended_suite(self, available_suites: list[str]) -> str | None:
+        configured = os.getenv("BENCHMARK_SUITE")
+        if configured and configured in available_suites:
+            return configured
+        if "quick_compare" in available_suites:
+            return "quick_compare"
+        return available_suites[0] if available_suites else None
 
     def _persist_locked(self) -> None:
         json_dump_to_path(self.state_path, asdict(self._state), pretty=True)

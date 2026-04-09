@@ -152,6 +152,12 @@ class BenchmarkOrchestrator:
         timeout_seconds = model_config.effective_timeout(self.config.run_defaults.default_timeout_seconds)
 
         for warmup_index in range(1, self.config.run_defaults.warmup_runs + 1):
+            LOGGER.info(
+                "Warmup start: model=%s test_case=%s repetition=%s",
+                model_config.id,
+                test_case.test_case_id,
+                warmup_index,
+            )
             self._emit_progress(
                 event="run_step_started",
                 stage="running",
@@ -179,6 +185,13 @@ class BenchmarkOrchestrator:
         measured_repetitions = test_case.effective_repetitions(self.config.run_defaults.default_repetitions)
         for repetition_index in range(1, measured_repetitions + 1):
             phase = "warm" if self.config.run_defaults.warmup_runs > 0 or repetition_index > 1 else "cold"
+            LOGGER.info(
+                "Measured run start: model=%s test_case=%s repetition=%s phase=%s",
+                model_config.id,
+                test_case.test_case_id,
+                repetition_index,
+                phase,
+            )
             self._emit_progress(
                 event="run_step_started",
                 stage="running",
@@ -428,6 +441,16 @@ class BenchmarkOrchestrator:
         return round(output_tokens / (duration_ms / 1000.0), 2)
 
     def _emit_result_progress(self, result: RunResult) -> None:
+        LOGGER.info(
+            "Run finished: model=%s test_case=%s repetition=%s success=%s validation=%s duration_ms=%s error=%s",
+            result.model_id,
+            result.test_case_id,
+            result.repetition_index,
+            result.success,
+            result.validation_passed,
+            result.duration_ms,
+            result.error_type,
+        )
         self._emit_progress(
             event="run_step_finished",
             stage="running",
