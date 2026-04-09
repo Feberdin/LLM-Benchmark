@@ -158,3 +158,30 @@ def test_validator_accepts_valid_yaml_payload() -> None:
 
     assert outcome.passed is True
     assert outcome.parsed_output_json == {"enabled": True}
+
+
+def test_validator_accepts_any_of_reference_keyword_group() -> None:
+    validator = ResponseValidator()
+    case = TestCaseDefinition.model_validate(
+        {
+            "test_case_id": "keyword-group-case",
+            "category": "chat",
+            "title": "Reference keyword group",
+            "description": "The model may mention one of several acceptable root cause categories.",
+            "prompt": "Return one likely cause category.",
+            "validation_rules": {
+                "reference_keywords_any": ["capacity", "configuration"],
+            },
+        }
+    )
+    response = UnifiedResponse(
+        http_status=200,
+        raw_payload={"choices": []},
+        raw_response_text="Rollback first. The most likely issue is a configuration regression.",
+    )
+
+    outcome = validator.validate(case, response)
+
+    assert outcome.passed is True
+    assert outcome.metrics["quality_checks_total"] == 1
+    assert outcome.metrics["quality_checks_passed"] == 1

@@ -280,6 +280,23 @@ class ResponseValidator:
                     )
                 )
 
+        if test_case.validation_rules.reference_keywords_any:
+            metrics["quality_checks_total"] += 1
+            lowered_keywords = [keyword.lower() for keyword in test_case.validation_rules.reference_keywords_any]
+            if any(keyword in searchable_blob for keyword in lowered_keywords):
+                metrics["quality_checks_passed"] += 1
+            else:
+                issues.append(
+                    ValidationIssue(
+                        code="reference_keyword_group_missing",
+                        category="quality",
+                        message=(
+                            "None of the acceptable reference keywords were found in the output."
+                        ),
+                        details={"accepted_keywords": test_case.validation_rules.reference_keywords_any},
+                    )
+                )
+
         return ValidationOutcome(
             passed=not issues,
             issues=issues,

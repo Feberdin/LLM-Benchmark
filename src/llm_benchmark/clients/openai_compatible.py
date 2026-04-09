@@ -130,6 +130,7 @@ class OpenAICompatibleClient:
         headers = self._build_headers(model_config)
 
         text_parts: list[str] = []
+        reasoning_parts: list[str] = []
         tool_calls_by_index: dict[int, dict[str, Any]] = {}
         usage: dict[str, Any] = {}
         finish_reason: str | None = None
@@ -176,6 +177,9 @@ class OpenAICompatibleClient:
                 content = self._flatten_content(delta.get("content"))
                 if content:
                     text_parts.append(content)
+                reasoning = self._flatten_content(delta.get("reasoning") or delta.get("reasoning_content"))
+                if reasoning:
+                    reasoning_parts.append(reasoning)
 
                 for tool_delta in delta.get("tool_calls") or []:
                     index = int(tool_delta.get("index", 0))
@@ -191,11 +195,28 @@ class OpenAICompatibleClient:
                     existing["function"]["name"] += function_payload.get("name", "")
                     existing["function"]["arguments"] += function_payload.get("arguments", "")
 
+        raw_response_text = "".join(text_parts).strip() or None
+        tool_calls = list(tool_calls_by_index.values())
+        if not raw_response_text and not tool_calls:
+            raise BenchmarkClientError(
+                self._build_empty_content_message(
+                    has_reasoning=bool(reasoning_parts),
+                    finish_reason=finish_reason,
+                ),
+                error_type="empty_assistant_content",
+                http_status=response.status_code,
+                payload={
+                    "events": raw_events,
+                    "reasoning_excerpt": self._truncate_debug_text("".join(reasoning_parts).strip()),
+                    "finish_reason": finish_reason,
+                },
+            )
+
         return UnifiedResponse(
             http_status=response.status_code,
             raw_payload={"events": raw_events},
-            raw_response_text="".join(text_parts).strip() or None,
-            tool_calls=list(tool_calls_by_index.values()),
+            raw_response_text=raw_response_text,
+            tool_calls=tool_calls,
             finish_reason=finish_reason,
             input_tokens=self._coerce_int(usage.get("prompt_tokens")),
             output_tokens=self._coerce_int(usage.get("completion_tokens")),
@@ -226,11 +247,28 @@ class OpenAICompatibleClient:
 
         message = choices[0].get("message") or {}
         usage = payload.get("usage") or {}
+        raw_response_text = self._flatten_content(message.get("content"))
+        tool_calls = message.get("tool_calls") or []
+        reasoning_text = self._flatten_content(message.get("reasoning") or message.get("reasoning_content"))
+        if not raw_response_text and not tool_calls:
+            raise BenchmarkClientError(
+                self._build_empty_content_message(
+                    has_reasoning=bool(reasoning_text),
+                    finish_reason=choices[0].get("finish_reason"),
+                ),
+                error_type="empty_assistant_content",
+                http_status=response.status_code,
+                payload={
+                    "response": payload,
+                    "reasoning_excerpt": self._truncate_debug_text(reasoning_text),
+                },
+            )
+
         return UnifiedResponse(
             http_status=response.status_code,
             raw_payload=payload,
-            raw_response_text=self._flatten_content(message.get("content")),
-            tool_calls=message.get("tool_calls") or [],
+            raw_response_text=raw_response_text,
+            tool_calls=tool_calls,
             finish_reason=choices[0].get("finish_reason"),
             input_tokens=self._coerce_int(usage.get("prompt_tokens")),
             output_tokens=self._coerce_int(usage.get("completion_tokens")),
@@ -321,6 +359,32 @@ class OpenAICompatibleClient:
         if isinstance(payload.get("message"), str):
             return payload["message"]
         return None
+
+    @staticmethod
+    def _build_empty_content_message(*, has_reasoning: bool, finish_reason: str | None) -> str:
+        """Explain why a 200 OK response without assistant content is still unusable."""
+
+        suffix = f" Finish reason: {finish_reason}." if finish_reason else ""
+        if has_reasoning:
+            return (
+                "Provider returned no assistant content or tool calls, but did include reasoning text. "
+                "This often happens with thinking-capable local models when the completion budget is consumed "
+                "before the final answer is emitted. Increase max_output_tokens or disable reasoning in "
+                "model-specific default_parameters when the backend supports it."
+                f"{suffix}"
+            )
+        return f"Provider returned no assistant content or tool calls.{suffix}"
+
+    @staticmethod
+    def _truncate_debug_text(text: str | None, limit: int = 500) -> str | None:
+        """Keep provider debug payloads small enough for JSONL exports and dashboards."""
+
+        if not text:
+            return None
+        stripped = text.strip()
+        if len(stripped) <= limit:
+            return stripped
+        return f"{stripped[:limit]}..."
 
     @staticmethod
     def _flatten_content(content: Any) -> str | None:

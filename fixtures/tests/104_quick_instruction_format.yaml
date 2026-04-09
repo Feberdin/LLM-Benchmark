@@ -24,7 +24,7 @@ validation_rules:
     - "*"
   regex_must_match:
     - "(?m)^status:\\s*.+$"
-    - "(?m)^urgency:\\s*(low|medium|high)$"
+    - "(?im)^urgency:\\s*(low|medium|high)$"
     - "(?m)^summary:\\s+.+$"
   max_length_chars: 150
 scoring_weights:

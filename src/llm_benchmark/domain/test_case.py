@@ -39,6 +39,7 @@ class ValidationRules(BaseModel):
     expected_json_values: dict[str, Any] = Field(default_factory=dict)
     contains_all: list[str] = Field(default_factory=list)
     contains_none: list[str] = Field(default_factory=list)
+    reference_keywords_any: list[str] = Field(default_factory=list)
     regex_must_match: list[str] = Field(default_factory=list)
     regex_must_not_match: list[str] = Field(default_factory=list)
     min_length_chars: int | None = Field(default=None, ge=0)

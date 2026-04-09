@@ -233,7 +233,8 @@ class BenchmarkOrchestrator:
 
         prompt_hash = sha256_text(f"{test_case.system_prompt or ''}\n\n{test_case.prompt}")
         run_started_at = utcnow()
-        started_monotonic = perf_counter()
+        queued_monotonic = perf_counter()
+        request_started_monotonic: float | None = None
         metadata: dict[str, Any] = {
             "phase": phase,
             "suites": test_case.suites,
@@ -247,6 +248,8 @@ class BenchmarkOrchestrator:
 
         try:
             async with semaphore:
+                request_started_monotonic = perf_counter()
+                metadata["queue_wait_ms"] = round((request_started_monotonic - queued_monotonic) * 1000, 2)
                 response, retries_used = await client.execute(
                     model_config=model_config,
                     test_case=test_case,
@@ -260,7 +263,7 @@ class BenchmarkOrchestrator:
             if response.tool_calls:
                 metadata["tool_calls"] = response.tool_calls
 
-            duration_ms = round((perf_counter() - started_monotonic) * 1000, 2)
+            duration_ms = round((perf_counter() - request_started_monotonic) * 1000, 2)
             tokens_per_second = self._calculate_tokens_per_second(response.output_tokens, duration_ms)
             raw_response_text = response.raw_response_text if self.config.run_defaults.capture_raw_response_text else None
 
@@ -306,7 +309,8 @@ class BenchmarkOrchestrator:
             return self._build_failed_result(
                 benchmark_run_id=benchmark_run_id,
                 run_started_at=run_started_at,
-                started_monotonic=started_monotonic,
+                queued_monotonic=queued_monotonic,
+                request_started_monotonic=request_started_monotonic,
                 model_config=model_config,
                 test_case=test_case,
                 repetition_index=repetition_index,
@@ -326,7 +330,8 @@ class BenchmarkOrchestrator:
             return self._build_failed_result(
                 benchmark_run_id=benchmark_run_id,
                 run_started_at=run_started_at,
-                started_monotonic=started_monotonic,
+                queued_monotonic=queued_monotonic,
+                request_started_monotonic=request_started_monotonic,
                 model_config=model_config,
                 test_case=test_case,
                 repetition_index=repetition_index,
@@ -341,7 +346,8 @@ class BenchmarkOrchestrator:
             return self._build_failed_result(
                 benchmark_run_id=benchmark_run_id,
                 run_started_at=run_started_at,
-                started_monotonic=started_monotonic,
+                queued_monotonic=queued_monotonic,
+                request_started_monotonic=request_started_monotonic,
                 model_config=model_config,
                 test_case=test_case,
                 repetition_index=repetition_index,
@@ -366,7 +372,8 @@ class BenchmarkOrchestrator:
             return self._build_failed_result(
                 benchmark_run_id=benchmark_run_id,
                 run_started_at=run_started_at,
-                started_monotonic=started_monotonic,
+                queued_monotonic=queued_monotonic,
+                request_started_monotonic=request_started_monotonic,
                 model_config=model_config,
                 test_case=test_case,
                 repetition_index=repetition_index,
@@ -383,7 +390,8 @@ class BenchmarkOrchestrator:
         *,
         benchmark_run_id: str,
         run_started_at: Any,
-        started_monotonic: float,
+        queued_monotonic: float,
+        request_started_monotonic: float | None,
         model_config: Any,
         test_case: TestCaseDefinition,
         repetition_index: int,
@@ -394,7 +402,12 @@ class BenchmarkOrchestrator:
         http_status: int | None,
         timeout: bool,
     ) -> RunResult:
-        duration_ms = round((perf_counter() - started_monotonic) * 1000, 2)
+        now_monotonic = perf_counter()
+        if request_started_monotonic is None:
+            metadata.setdefault("queue_wait_ms", round((now_monotonic - queued_monotonic) * 1000, 2))
+            duration_ms = 0.0
+        else:
+            duration_ms = round((now_monotonic - request_started_monotonic) * 1000, 2)
         result = RunResult(
             benchmark_run_id=benchmark_run_id,
             run_started_at=isoformat_utc(run_started_at),
