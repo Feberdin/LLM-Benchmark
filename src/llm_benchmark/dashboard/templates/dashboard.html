@@ -317,6 +317,7 @@
                   <th>Start</th>
                   <th>Ende</th>
                   <th>Resultat</th>
+                  <th>Artefakte</th>
                 </tr>
               </thead>
               <tbody>
@@ -327,9 +328,20 @@
                     <td>{{ row.started_at }}</td>
                     <td>{{ row.finished_at or "n/a" }}</td>
                     <td>{{ row.successful_records }} ok / {{ row.failed_records }} fail</td>
+                    <td>
+                      {% if row.artifact_downloads %}
+                        <div class="download-chip-row">
+                          {% for item in row.artifact_downloads[:3] %}
+                            <a href="{{ item.path }}" class="mini-download-chip">{{ item.name }}</a>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <span class="muted">n/a</span>
+                      {% endif %}
+                    </td>
                   </tr>
                 {% else %}
-                  <tr><td colspan="5">Noch keine Historie vorhanden.</td></tr>
+                  <tr><td colspan="6">Noch keine Historie vorhanden.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -512,11 +524,17 @@
             <div class="panel-card">
               <h2>Erzeugte Dateien</h2>
               <ul class="signal-list compact" id="generated-file-list">
-                {% for item in run_state.generated_files %}
-                  <li><p>{{ item }}</p></li>
+                {% if run_state.generated_downloads %}
+                  {% for item in run_state.generated_downloads %}
+                    <li><p><a href="{{ item.path }}">{{ item.name }}</a> <small>{{ item.size_kb }} KB</small></p></li>
+                  {% endfor %}
                 {% else %}
-                  <li><p>Nach einem erfolgreichen Lauf erscheinen hier die frisch erzeugten Artefakte.</p></li>
-                {% endfor %}
+                  {% for item in run_state.generated_files %}
+                    <li><p>{{ item }}</p></li>
+                  {% else %}
+                    <li><p>Nach einem erfolgreichen Lauf erscheinen hier die frisch erzeugten Artefakte.</p></li>
+                  {% endfor %}
+                {% endif %}
               </ul>
             </div>
           </section>
@@ -785,6 +803,18 @@
           wrapper.innerHTML = "<table><tbody><tr><td>Noch keine Historie vorhanden.</td></tr></tbody></table>";
           return;
         }
+        const renderArtifactChips = (downloads) => {
+          if (!downloads || downloads.length === 0) {
+            return "<span class='muted'>n/a</span>";
+          }
+          return `
+            <div class="download-chip-row">
+              ${downloads.slice(0, 3).map((item) => `
+                <a href="${item.path}" class="mini-download-chip">${item.name}</a>
+              `).join("")}
+            </div>
+          `;
+        };
         const rows = history.slice(0, 10).map((row) => `
           <tr>
             <td>${row.status}</td>
@@ -792,6 +822,7 @@
             <td>${row.started_at ?? "n/a"}</td>
             <td>${row.finished_at ?? "n/a"}</td>
             <td>${row.successful_records} ok / ${row.failed_records} fail</td>
+            <td>${renderArtifactChips(row.artifact_downloads)}</td>
           </tr>
         `).join("");
         wrapper.innerHTML = `
@@ -803,6 +834,7 @@
                 <th>Start</th>
                 <th>Ende</th>
                 <th>Resultat</th>
+                <th>Artefakte</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -817,7 +849,12 @@
           node.innerHTML = "<li><p>Nach einem erfolgreichen Lauf erscheinen hier die frisch erzeugten Artefakte.</p></li>";
           return;
         }
-        node.innerHTML = files.map((item) => `<li><p>${item}</p></li>`).join("");
+        node.innerHTML = files.map((item) => {
+          if (typeof item === "string") {
+            return `<li><p>${item}</p></li>`;
+          }
+          return `<li><p><a href="${item.path}">${item.name}</a> <small>${item.size_kb} KB</small></p></li>`;
+        }).join("");
       }
 
       function renderWarnings(warnings) {
@@ -931,7 +968,7 @@
 
         renderTimeline(state.events || []);
         renderHistory(payload.history || []);
-        renderGeneratedFiles(state.generated_files || []);
+        renderGeneratedFiles(state.generated_downloads || state.generated_files || []);
         renderWarnings(preflight.warnings || []);
         renderConnectivityPayload(payload.connectivity || {});
       }

@@ -68,6 +68,7 @@ class RunState:
     errors: list[str] = field(default_factory=list)
     latest_error: str | None = None
     generated_files: list[str] = field(default_factory=list)
+    generated_downloads: list[dict[str, Any]] = field(default_factory=list)
     events: list[TimelineEvent] = field(default_factory=list)
 
 
@@ -384,6 +385,9 @@ class DashboardRunManager:
                 self._state.current_step = "Benchmarklauf erfolgreich abgeschlossen."
                 self._state.benchmark_run_id = execution.run_summary.benchmark_run_id
                 self._state.generated_files = self._discover_generated_files()
+                self._state.generated_downloads = self._discover_generated_downloads(
+                    execution.run_summary.benchmark_run_id
+                )
                 self._append_event_locked(
                     event="dashboard_run_succeeded",
                     stage="completed",
@@ -679,6 +683,7 @@ class DashboardRunManager:
             "successful_records": self._state.successful_records,
             "failed_records": self._state.failed_records,
             "latest_error": self._state.latest_error,
+            "artifact_downloads": list(self._state.generated_downloads),
         }
         self._history = [history_entry] + [
             row for row in self._history if row.get("run_id") != self._state.run_id
@@ -687,6 +692,32 @@ class DashboardRunManager:
 
     def _discover_generated_files(self) -> list[str]:
         return [name for name in REPORT_FILES if (self.results_dir / name).exists()]
+
+    def _discover_generated_downloads(self, benchmark_run_id: str | None) -> list[dict[str, Any]]:
+        """Return direct download links for one finished benchmark run."""
+
+        if not benchmark_run_id:
+            return []
+
+        history_dir = self.results_dir / "history" / benchmark_run_id
+        downloads: list[dict[str, Any]] = []
+        for name in REPORT_FILES:
+            history_path = history_dir / name
+            current_path = self.results_dir / name
+            path = history_path if history_path.exists() else current_path if current_path.exists() else None
+            if path is None:
+                continue
+            download_path = (
+                f"/downloads/history/{benchmark_run_id}/{name}" if history_path.exists() else f"/downloads/{name}"
+            )
+            downloads.append(
+                {
+                    "name": name,
+                    "path": download_path,
+                    "size_kb": round(path.stat().st_size / 1024, 1),
+                }
+            )
+        return downloads
 
     def _cached_preflight(self, *, suite: str | None) -> dict[str, Any]:
         normalized_suite = None if not suite or suite == "all" else suite

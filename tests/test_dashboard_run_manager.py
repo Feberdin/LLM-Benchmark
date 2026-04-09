@@ -141,6 +141,11 @@ def test_dashboard_api_can_start_and_track_background_run(tmp_path: Path, monkey
         progress_callback({"event": "building_reports", "stage": "writing_reports"})
         (results_dir / "final_report.json").write_text("{}", encoding="utf-8")
         (results_dir / "analysis_input.json").write_text("{}", encoding="utf-8")
+        history_dir = results_dir / "history" / "bench-123"
+        history_dir.mkdir(parents=True, exist_ok=True)
+        (history_dir / "raw_runs.jsonl").write_text("{}", encoding="utf-8")
+        (history_dir / "final_report.json").write_text("{}", encoding="utf-8")
+        (history_dir / "analysis_input.json").write_text("{}", encoding="utf-8")
         progress_callback(
             {
                 "event": "reports_written",
@@ -176,7 +181,13 @@ def test_dashboard_api_can_start_and_track_background_run(tmp_path: Path, monkey
         assert current_payload["state"]["status"] == "succeeded"
         assert current_payload["state"]["benchmark_run_id"] == "bench-123"
         assert "final_report.json" in current_payload["state"]["generated_files"]
+        assert current_payload["state"]["generated_downloads"][0]["path"].startswith("/downloads/history/bench-123/")
         assert current_payload["history"][0]["status"] == "succeeded"
+        assert current_payload["history"][0]["artifact_downloads"][0]["path"].startswith("/downloads/history/bench-123/")
+
+        download_response = client.get("/downloads/history/bench-123/analysis_input.json")
+        assert download_response.status_code == 200
+        assert download_response.text == "{}"
 
 
 def test_dashboard_api_can_run_connectivity_check(tmp_path: Path, monkeypatch) -> None:

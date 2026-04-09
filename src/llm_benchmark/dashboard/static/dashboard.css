@@ -252,6 +252,28 @@ input {
   gap: 16px;
 }
 
+.download-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mini-download-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--cyan);
+  font-size: 0.74rem;
+  text-decoration: none;
+}
+
+.mini-download-chip:hover {
+  background: rgba(0, 229, 255, 0.16);
+}
+
 .metric-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: 18px;

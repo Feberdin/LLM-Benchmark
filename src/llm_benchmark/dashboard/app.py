@@ -201,6 +201,13 @@ def create_dashboard_app(*, config_path: Path, results_dir: Path, tests_dir: Pat
             raise HTTPException(status_code=404, detail="Report artifact not found.")
         return FileResponse(path, filename=path.name)
 
+    @app.get("/downloads/history/{benchmark_run_id}/{filename}")
+    async def download_history(benchmark_run_id: str, filename: str) -> FileResponse:
+        path = service.available_history_download(benchmark_run_id, filename)
+        if path is None:
+            raise HTTPException(status_code=404, detail="Historical report artifact not found.")
+        return FileResponse(path, filename=path.name)
+
     return app
 
 

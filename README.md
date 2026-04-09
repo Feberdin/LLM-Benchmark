@@ -366,6 +366,19 @@ Diese Dateien enthalten jetzt auch:
 - `isolated_duration_ms`
 - `total_elapsed_since_run_start_ms`
 
+Fuer normale Benchmarklaeufe gibt es zusaetzlich pro Run eigene Snapshot-Artefakte unter:
+
+- `results/history/<benchmark_run_id>/raw_runs.jsonl`
+- `results/history/<benchmark_run_id>/raw_runs.csv`
+- `results/history/<benchmark_run_id>/summary_by_model.csv`
+- `results/history/<benchmark_run_id>/summary_by_category.csv`
+- `results/history/<benchmark_run_id>/final_report.json`
+- `results/history/<benchmark_run_id>/final_report.md`
+- `results/history/<benchmark_run_id>/final_report.html`
+- `results/history/<benchmark_run_id>/analysis_input.json`
+
+Das Dashboard zeigt diese Snapshots jetzt direkt im Run-Verlauf als separate Download-Links an. Damit kannst du einzelne Laeufe gezielt sichern oder teilen, ohne die aktuellen Hauptdateien manuell kopieren zu muessen.
+
 ### `final_report.json`
 
 Dieses Artefakt ist fuer Menschen und strukturierte Tools gedacht und enthaelt unter anderem:
@@ -620,6 +633,7 @@ Besonders wichtig:
 - `final_report.html`
 - `final_report.json`
 - `analysis_input.json`
+- `history/<benchmark_run_id>/...` fuer laufspezifische Snapshots und Downloads
 - `live_compare/history.json`
 - `live_compare/runs/<run_id>.json`
 

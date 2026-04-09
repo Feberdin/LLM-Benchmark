@@ -32,6 +32,7 @@ REPORT_FILES = [
     "final_report.json",
     "analysis_input.json",
 ]
+HISTORY_DOWNLOAD_FILES = REPORT_FILES
 
 VIEW_OPTIONS = [
     ("overview", "Overview"),
@@ -155,6 +156,36 @@ class DashboardService:
         if filename not in REPORT_FILES or not candidate.exists():
             return None
         return candidate
+
+    def available_history_download(self, benchmark_run_id: str, filename: str) -> Path | None:
+        """Return a validated per-run snapshot file when it exists in the history directory."""
+
+        if not benchmark_run_id or "/" in benchmark_run_id or ".." in benchmark_run_id:
+            return None
+        candidate = self.results_dir / HISTORY_DIR_NAME / benchmark_run_id / filename
+        if filename not in HISTORY_DOWNLOAD_FILES or not candidate.exists():
+            return None
+        return candidate
+
+    def build_history_downloads(self, benchmark_run_id: str | None) -> list[dict[str, Any]]:
+        """Build operator-friendly download cards for one historical benchmark run."""
+
+        if not benchmark_run_id:
+            return []
+        downloads: list[dict[str, Any]] = []
+        for name in HISTORY_DOWNLOAD_FILES:
+            path = self.available_history_download(benchmark_run_id, name)
+            if path is None:
+                continue
+            downloads.append(
+                {
+                    "name": name,
+                    "path": f"/downloads/history/{benchmark_run_id}/{name}",
+                    "size_kb": round(path.stat().st_size / 1024, 1),
+                    "modified_at": isoformat_utc(datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)),
+                }
+            )
+        return downloads
 
     def _load_context(self) -> dict[str, Any]:
         signature = self._build_signature()
