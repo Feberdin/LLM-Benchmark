@@ -6,7 +6,7 @@ Debugging: If the first start fails, inspect `/mnt/user/appdata/llm-benchmark/re
 -->
 <Container version="2">
   <Name>llm-benchmark</Name>
-  <Repository>llm-benchmark:local</Repository>
+  <Repository>ghcr.io/feberdin/llm-benchmark:latest</Repository>
   <Registry />
   <Network>bridge</Network>
   <Shell>sh</Shell>
@@ -17,8 +17,8 @@ Debugging: If the first start fails, inspect `/mnt/user/appdata/llm-benchmark/re
   <Category>Tools:Other</Category>
   <WebUI>http://[IP]:[PORT:8080]/dashboard</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/Feberdin/LLM-Benchmark/main/unraid/llm-benchmark.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/Feberdin/LLM-Benchmark/main/docker/icon.png</Icon>
-  <Description>Benchmark and dashboard container for Unraid. It expects a locally built image named llm-benchmark:local, reads model config from /config, test cases from /app/tests, writes reports to /app/results and can stay online as a dashboard with web-triggered runs or auto-run a benchmark job on startup.</Description>
+  <Icon>https://raw.githubusercontent.com/Feberdin/LLM-Benchmark/main/docker/icon.svg</Icon>
+  <Description>Benchmark and dashboard container for Unraid. It pulls the public GHCR image, reads model config from /config, test cases from /app/tests, writes reports to /app/results and can stay online as a dashboard with web-triggered runs or auto-run a benchmark job on startup.</Description>
 
   <Config Name="Dashboard Port" Target="8080" Default="8080" Mode="tcp" Type="Port" Display="always" Required="false" Description="Expose this port when BENCHMARK_ACTION=dashboard to access the integrated web dashboard and start runs from the browser." />
 
@@ -40,9 +40,9 @@ Debugging: If the first start fails, inspect `/mnt/user/appdata/llm-benchmark/re
   <Config Name="OpenAI Base URL" Target="OPENAI_BASE_URL" Default="https://api.openai.com/v1" Mode="" Type="Variable" Display="advanced" Required="false" Description="Override only if you use an OpenAI-compatible gateway instead of api.openai.com." />
   <Config Name="OpenAI Model Name" Target="OPENAI_MODEL_NAME" Default="gpt-4.1-mini" Mode="" Type="Variable" Display="advanced" Required="false" Description="Reference model name used in config.unraid.example.yaml." />
 
-  <Config Name="Mistral Base URL" Target="MISTRAL_BASE_URL" Default="http://192.168.178.10:11434/v1" Mode="" Type="Variable" Display="always" Required="true" Description="OpenAI-compatible endpoint for your local Mistral runtime." />
-  <Config Name="Mistral Model Name" Target="MISTRAL_MODEL_NAME" Default="mistral-small3.2" Mode="" Type="Variable" Display="advanced" Required="false" Description="Exact local runtime model id for Mistral." />
-  <Config Name="Qwen Base URL" Target="QWEN_BASE_URL" Default="http://192.168.178.10:11434/v1" Mode="" Type="Variable" Display="always" Required="true" Description="OpenAI-compatible endpoint for your local Qwen runtime." />
+  <Config Name="Mistral Base URL" Target="MISTRAL_BASE_URL" Default="http://ollama-or-unraid-host:11434/v1" Mode="" Type="Variable" Display="always" Required="true" Description="OpenAI-compatible endpoint for your local Mistral runtime." />
+  <Config Name="Mistral Model Name" Target="MISTRAL_MODEL_NAME" Default="mistral-small3.2:latest" Mode="" Type="Variable" Display="advanced" Required="false" Description="Exact local runtime model id for Mistral." />
+  <Config Name="Qwen Base URL" Target="QWEN_BASE_URL" Default="http://ollama-or-unraid-host:11434/v1" Mode="" Type="Variable" Display="always" Required="true" Description="OpenAI-compatible endpoint for your local Qwen runtime." />
   <Config Name="Qwen Model Name" Target="QWEN_MODEL_NAME" Default="qwen3.5:35b-a3b" Mode="" Type="Variable" Display="advanced" Required="false" Description="Exact local runtime model id for Qwen." />
 
   <Config Name="Log Level" Target="LOG_LEVEL" Default="INFO" Mode="" Type="Variable" Display="advanced" Required="false" Description="Standard runtime log level. Use DEBUG only when needed." />

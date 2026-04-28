@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security concern
+    url: https://github.com/Feberdin/LLM-Benchmark/blob/main/SECURITY.md
+    about: Bitte lies zuerst die Security-Hinweise, wenn dein Thema echte Secrets oder sensible Artefakte beruehrt.

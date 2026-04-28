@@ -1,0 +1,6 @@
+# Purpose: Define default reviewers and maintainers for repository-wide changes.
+# Input/Output: Consumed by GitHub to suggest review ownership on pull requests.
+# Important invariants: Keep ownership broad and easy to understand for community contributors.
+# How to debug: If GitHub stops auto-suggesting reviewers, check this file path and syntax first.
+
+* @Feberdin

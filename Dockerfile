@@ -5,6 +5,20 @@
 
 FROM python:3.12-slim AS runtime
 
+ARG BUILD_DATE=unknown
+ARG VCS_REF=unknown
+ARG VERSION=0.2.0
+
+LABEL org.opencontainers.image.title="LLM Benchmark" \
+      org.opencontainers.image.description="Production-oriented Docker and Unraid friendly benchmark orchestrator for OpenAI-compatible LLM endpoints." \
+      org.opencontainers.image.source="https://github.com/Feberdin/LLM-Benchmark" \
+      org.opencontainers.image.url="https://github.com/Feberdin/LLM-Benchmark" \
+      org.opencontainers.image.documentation="https://github.com/Feberdin/LLM-Benchmark#readme" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.version="${VERSION}"
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \

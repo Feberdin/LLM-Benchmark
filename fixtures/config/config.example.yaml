@@ -35,7 +35,7 @@ models:
     provider: "ollama"
     base_url: "${OLLAMA_BASE_URL:-http://ollama:11434/v1}"
     api_type: "openai_chat_completions"
-    model_name: "mistral-small3.2"
+    model_name: "mistral-small3.2:latest"
     enabled: true
     default_parameters:
       temperature: 0.0

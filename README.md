@@ -1,6 +1,12 @@
 # LLM Benchmark
 
+[![CI](https://github.com/Feberdin/LLM-Benchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/Feberdin/LLM-Benchmark/actions/workflows/ci.yml)
+[![GHCR](https://img.shields.io/badge/GHCR-ghcr.io%2Ffeberdin%2Fllm--benchmark-0A5FFF?logo=docker)](https://github.com/Feberdin/LLM-Benchmark/pkgs/container/llm-benchmark)
+[![License](https://img.shields.io/github/license/Feberdin/LLM-Benchmark)](https://github.com/Feberdin/LLM-Benchmark/blob/main/LICENSE)
+
 Zentraler, Docker- und Unraid-tauglicher Benchmark-Orchestrator fuer OpenAI-kompatible LLM-Endpunkte mit integriertem Web-Dashboard. Das Projekt vergleicht lokale und externe Modelle mit denselben Prompts, schreibt nachvollziehbare Rohdaten, erzeugt Reports fuer Menschen und liefert ein maschinenlesbares `analysis_input.json` fuer spaetere LLM- oder Analysten-Auswertung.
+
+Der aktuelle Endstand ist bewusst als **community-faehige Basisversion** gedacht: lauffaehig fuer reale Unraid-Setups, reproduzierbar in CI, als oeffentliches GHCR-Image verteilbar und strukturiert genug, damit die Community darauf sauber weiterentwickeln kann.
 
 ## Zweck
 
@@ -31,6 +37,20 @@ Das Tool hostet diese Modelle nicht selbst. Es arbeitet als zentraler Benchmark-
 - Arbeitet robust weiter, auch wenn einzelne Endpunkte fehlschlagen, timeouts produzieren oder keine Token-Metriken liefern.
 - Ist fuer Unraid-Mounts mit `/config`, `/app/tests` und `/app/results` vorbereitet.
 - Unterstuetzt einen env-gesteuerten Auto-Run-Startpfad fuer Unraid.
+- Bringt GitHub Actions fuer Tests und GHCR-Container-Publishing mit.
+- Enthaelt Community-Health-Dateien fuer Issues, Pull Requests, Code Owners und Verhaltensregeln.
+
+## Community-Endstand
+
+Fuer die erste oeffentliche Community-Version soll das Projekt in genau diesem Zustand nutzbar sein:
+
+- reproduzierbare lokale und Unraid-nahe Nutzung
+- veroeffentlichbares Container-Image ueber GHCR
+- lesbare Dokumentation fuer Betreiber und Mitwirkende
+- stabile JSON-/CSV-Artefakte fuer externe Analyse
+- klare Erweiterungspunkte statt schwer entkoppelbarer Spezialpfade
+
+Das Zielbild ist in [community-end-state.md](/Users/joachim.stiegler/LLM-Benchmark/docs/community-end-state.md) kurz als Maintainer- und Community-Referenz beschrieben.
 
 ## Dashboard
 
@@ -161,15 +181,24 @@ Wichtige Architekturentscheidung:
 
 ```text
 .
+├── .github
+│   ├── ISSUE_TEMPLATE
+│   ├── workflows
+│   ├── CODEOWNERS
+│   └── PULL_REQUEST_TEMPLATE.md
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
 ├── README.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
+├── CODE_OF_CONDUCT.md
 ├── CHANGELOG.md
+├── docs
+│   └── community-end-state.md
 ├── docker
-│   └── entrypoint.sh
+│   ├── entrypoint.sh
+│   └── icon.svg
 ├── fixtures
 │   ├── config
 │   │   ├── config.example.yaml
@@ -312,7 +341,7 @@ Die Vorlage liegt unter [llm-benchmark.xml](/Users/joachim.stiegler/LLM-Benchmar
 Wichtige Eigenschaften:
 
 - direkte Mounts fuer `/config`, `/app/results`, `/app/tests`
-- Repository in der XML steht bewusst auf `llm-benchmark:local`, weil das Unraid-Template fuer ein lokal gebautes Image gedacht ist
+- Repository zeigt auf `ghcr.io/feberdin/llm-benchmark:latest`
 - optionaler Dashboard-Port `8080`
 - `BENCHMARK_ACTION=dashboard` als sinnvoller Default fuer persistenten Betrieb
 - `BENCHMARK_ACTION=run` fuer One-Shot-Benchmark-Jobs
@@ -479,6 +508,12 @@ Dashboard starten:
 benchmark dashboard --config /config/config.unraid.example.yaml --tests-dir /app/tests --results-dir /app/results --host 0.0.0.0 --port 8080
 ```
 
+GHCR-Image direkt nutzen:
+
+```bash
+docker pull ghcr.io/feberdin/llm-benchmark:latest
+```
+
 Live Compare im Browser nutzen:
 
 ```text
@@ -513,6 +548,12 @@ Das Compose-Setup startet standardmaessig das Dashboard:
 
 ```bash
 docker compose up -d llm-benchmark
+```
+
+Fuer ein reines Registry-Setup ohne lokales Bauen kannst du stattdessen direkt das veroeffentlichte GHCR-Image verwenden:
+
+```bash
+docker run --rm ghcr.io/feberdin/llm-benchmark:latest --help
 ```
 
 Benchmark-Lauf parallel oder manuell:
@@ -571,9 +612,8 @@ Importiere [llm-benchmark.xml](/Users/joachim.stiegler/LLM-Benchmark/unraid/llm-
 
 Wichtig:
 
-- Die XML erwartet aktuell ein lokal gebautes Image `llm-benchmark:local`.
-- Falls du das Repo direkt auf Unraid gebaut hast, passt das bereits.
-- Falls du spaeter ein eigenes Registry-Image nutzt, kannst du das Repository-Feld im Template entsprechend ueberschreiben.
+- Die XML zeigt jetzt auf das oeffentliche GHCR-Image `ghcr.io/feberdin/llm-benchmark:latest`.
+- Fuer lokale Entwickler-Builds kannst du das Repository-Feld in Unraid trotzdem auf ein eigenes Test-Image ueberschreiben.
 
 Fuer den persistenten Dashboard-Betrieb:
 
@@ -782,6 +822,14 @@ gemeinsam lesen.
   - `raw_runs.jsonl`
   - `final_report.json`
   - `analysis_input.json`
+
+## Community und Releases
+
+- CI prueft derzeit Python-Tests, Fixture-Smokes und den Container-Build.
+- Container-Releases gehen ueber GitHub Actions nach GHCR.
+- Fuer Bugs und Erweiterungen liegen strukturierte GitHub-Issue-Templates bereit.
+- Pull Requests nutzen eine feste Checkliste, damit Report-Schema, Doku und Tests nicht vergessen werden.
+- Repository-weite Verantwortlichkeit ist ueber [CODEOWNERS](/Users/joachim.stiegler/LLM-Benchmark/.github/CODEOWNERS) beschrieben.
 
 ## Security-Hinweise
 

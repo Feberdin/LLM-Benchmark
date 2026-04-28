@@ -47,15 +47,15 @@ run_defaults:
 
 models:
   # Local Mistral target.
-  # Change `base_url` if your OpenAI-compatible local runtime is not reachable under the shown IP/port.
+  # Change `base_url` if your OpenAI-compatible local runtime is not reachable under the shown host/port.
   # Change `model_name` to the exact identifier exposed by your runtime.
   # Set `enabled: false` to temporarily exclude this model from a run.
   - id: "mistral_local"
     label: "Mistral Local"
     provider: "local"
     api_type: "openai_compatible"
-    base_url: "${MISTRAL_BASE_URL:-http://192.168.178.10:11434/v1}"
-    model_name: "${MISTRAL_MODEL_NAME:-mistral-small3.2}"
+    base_url: "${MISTRAL_BASE_URL:-http://ollama-or-unraid-host:11434/v1}"
+    model_name: "${MISTRAL_MODEL_NAME:-mistral-small3.2:latest}"
     enabled: true
     default_parameters:
       temperature: 0.0
@@ -71,7 +71,7 @@ models:
     label: "Qwen Local"
     provider: "local"
     api_type: "openai_compatible"
-    base_url: "${QWEN_BASE_URL:-http://192.168.178.10:11434/v1}"
+    base_url: "${QWEN_BASE_URL:-http://ollama-or-unraid-host:11434/v1}"
     model_name: "${QWEN_MODEL_NAME:-qwen3.5:35b-a3b}"
     enabled: true
     default_parameters:

@@ -8,7 +8,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: feberdin/llm-benchmark:latest
+    image: ghcr.io/feberdin/llm-benchmark:latest
     container_name: llm-benchmark
     restart: "no"
     env_file:

@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest an improvement for benchmarks, reports, dashboard UX or deployment workflows.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: Ziel
+      description: Welches Problem soll geloest werden?
+      placeholder: Ich moechte Run-Artefakte nach Kategorie exportieren koennen.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Vorschlag
+      description: Wie sollte sich das System idealerweise verhalten?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Betroffener Bereich
+      options:
+        - Dashboard
+        - Live Compare
+        - Benchmark Runner
+        - Validation / Scoring
+        - Reports / Exports
+        - Docker / Unraid
+        - Documentation
+        - CI / Release
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativen oder Workarounds
+      description: Was funktioniert heute, und was fehlt dabei?
+  - type: textarea
+    id: context
+    attributes:
+      label: Zusatzkontext
+      description: Optional Screenshots, Beispielprompts oder synthetische Artefakte.

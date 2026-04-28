@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a reproducible defect in the benchmark engine, dashboard, reports or container setup.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke fuer den Report. Bitte teile nur synthetische oder anonymisierte Daten und keine echten Secrets.
+  - type: input
+    id: summary
+    attributes:
+      label: Kurzbeschreibung
+      description: Was ist das eigentliche Problem?
+      placeholder: Das Dashboard zeigt nach einem Run keine Artefakte an.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Umgebung
+      description: Welche Version, welcher Betriebsmodus und welche Laufzeitumgebung ist betroffen?
+      placeholder: |
+        Version/Commit:
+        Docker Image:
+        Unraid/Docker/Local:
+        Modellendpunkte:
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduktionsschritte
+      description: Bitte so konkret wie moeglich.
+      placeholder: |
+        1. Dashboard starten
+        2. Suite quick_compare waehlen
+        3. Benchmark starten
+        4. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsaechliches Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevante Logs oder Fehlermeldungen
+      description: Bitte sensible Daten entfernen.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Vor dem Abschicken geprueft
+      options:
+        - label: Ich habe keine echten API-Keys oder privaten Inhalte eingefuegt.
+          required: true
+        - label: Ich habe die README-Troubleshooting-Hinweise bereits geprueft.
+          required: true

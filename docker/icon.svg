@@ -1,0 +1,33 @@
+<!--
+Purpose: Lightweight public icon for GitHub raw delivery, GHCR metadata references and the Unraid template.
+Input/Output: Static SVG asset rendered by browsers or Docker template UIs.
+Important invariants: Keep the file self-contained and text-based so it is easy to version, review and replace later.
+How to debug: Open the raw GitHub URL or the local file in a browser if the Unraid template shows no icon.
+-->
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="64" y1="56" x2="448" y2="456" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10182C"/>
+      <stop offset="1" stop-color="#1A2340"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="112" y1="120" x2="400" y2="392" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF5CA8"/>
+      <stop offset="0.55" stop-color="#00E5FF"/>
+      <stop offset="1" stop-color="#FF9A3C"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="28" y="28" width="456" height="456" rx="96" fill="url(#bg)"/>
+  <rect x="44" y="44" width="424" height="424" rx="80" stroke="#2A3558" stroke-width="8"/>
+
+  <path d="M126 154H234C283.706 154 324 194.294 324 244C324 293.706 283.706 334 234 334H126V154Z" fill="#121A2E" stroke="url(#accent)" stroke-width="18"/>
+  <path d="M150 178H230C266.451 178 296 207.549 296 244C296 280.451 266.451 310 230 310H150V178Z" fill="rgba(0,0,0,0.18)"/>
+  <path d="M346 168V346" stroke="url(#accent)" stroke-width="22" stroke-linecap="round"/>
+  <path d="M388 202L346 168L304 202" stroke="url(#accent)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M388 312L346 346L304 312" stroke="url(#accent)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="188" cy="244" r="26" fill="#00E5FF"/>
+  <circle cx="188" cy="244" r="10" fill="#10182C"/>
+
+  <rect x="118" y="380" width="276" height="20" rx="10" fill="url(#accent)" opacity="0.9"/>
+</svg>
