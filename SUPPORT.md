@@ -28,4 +28,4 @@ Bitte moeglichst mitliefern:
 
 ## Security-Themen
 
-Bitte keine echten Secrets, privaten Dokumente oder internen Endpunkte in normale Issues posten. Lies in diesem Fall zuerst [SECURITY.md](/Users/joachim.stiegler/LLM-Benchmark/SECURITY.md).
+Bitte keine echten Secrets, privaten Dokumente oder internen Endpunkte in normale Issues posten. Lies in diesem Fall zuerst [SECURITY.md](SECURITY.md).

@@ -50,7 +50,7 @@ Fuer die erste oeffentliche Community-Version soll das Projekt in genau diesem Z
 - stabile JSON-/CSV-Artefakte fuer externe Analyse
 - klare Erweiterungspunkte statt schwer entkoppelbarer Spezialpfade
 
-Das Zielbild ist in [community-end-state.md](/Users/joachim.stiegler/LLM-Benchmark/docs/community-end-state.md) kurz als Maintainer- und Community-Referenz beschrieben.
+Das Zielbild ist in [community-end-state.md](docs/community-end-state.md) kurz als Maintainer- und Community-Referenz beschrieben.
 
 ## Dashboard
 
@@ -113,7 +113,7 @@ Zusatz zu `core`, `api_replacement`, `long_context` und `quick_compare`:
 
 ### SecondBrain
 
-Die Suite [secondbrain_suite.yaml](/Users/joachim.stiegler/LLM-Benchmark/fixtures/suites/secondbrain_suite.yaml) testet unter anderem:
+Die Suite [secondbrain_suite.yaml](fixtures/suites/secondbrain_suite.yaml) testet unter anderem:
 
 - RAG / Kontexttreue
 - quellenorientierte Antworten
@@ -127,7 +127,7 @@ Die Suite [secondbrain_suite.yaml](/Users/joachim.stiegler/LLM-Benchmark/fixture
 
 ### secondbrain-voice-gateway
 
-Die Suite [voice_gateway_suite.yaml](/Users/joachim.stiegler/LLM-Benchmark/fixtures/suites/voice_gateway_suite.yaml) testet unter anderem:
+Die Suite [voice_gateway_suite.yaml](fixtures/suites/voice_gateway_suite.yaml) testet unter anderem:
 
 - Routing-Klassifikation
 - Prefix-Priorisierung
@@ -141,7 +141,7 @@ Die Suite [voice_gateway_suite.yaml](/Users/joachim.stiegler/LLM-Benchmark/fixtu
 
 ### Paperless-KIplus
 
-Die Suite [paperless_kiplus_suite.yaml](/Users/joachim.stiegler/LLM-Benchmark/fixtures/suites/paperless_kiplus_suite.yaml) testet unter anderem:
+Die Suite [paperless_kiplus_suite.yaml](fixtures/suites/paperless_kiplus_suite.yaml) testet unter anderem:
 
 - Dokumentklassifikation
 - strikte JSON-/Schema-Treue
@@ -245,7 +245,7 @@ Wichtige Architekturentscheidung:
 
 ## Konservative Defaults fuer aeltere Unraid-Server
 
-Die produktionsnahe Unraid-Beispielkonfiguration unter [config.unraid.example.yaml](/Users/joachim.stiegler/LLM-Benchmark/fixtures/config/config.unraid.example.yaml) nutzt bewusst konservative Defaults:
+Die produktionsnahe Unraid-Beispielkonfiguration unter [config.unraid.example.yaml](fixtures/config/config.unraid.example.yaml) nutzt bewusst konservative Defaults:
 
 - `concurrency: 1`
   Grund: Grosse lokale Modelle blockieren auf CPU-Systemen sonst schnell das ganze System.
@@ -336,7 +336,7 @@ Empfohlene Host-Struktur:
 
 ## Unraid Template XML
 
-Die Vorlage liegt unter [llm-benchmark.xml](/Users/joachim.stiegler/LLM-Benchmark/unraid/llm-benchmark.xml).
+Die Vorlage liegt unter [llm-benchmark.xml](unraid/llm-benchmark.xml).
 
 Wichtige Eigenschaften:
 
@@ -349,7 +349,7 @@ Wichtige Eigenschaften:
 
 ## Beispielkonfiguration fuer 3 Modelle
 
-Die produktionsnahe Drei-Modell-Konfiguration liegt unter [config.unraid.example.yaml](/Users/joachim.stiegler/LLM-Benchmark/fixtures/config/config.unraid.example.yaml).
+Die produktionsnahe Drei-Modell-Konfiguration liegt unter [config.unraid.example.yaml](fixtures/config/config.unraid.example.yaml).
 
 Sie enthaelt:
 
@@ -576,7 +576,7 @@ mkdir -p /mnt/user/appdata/llm-benchmark/logs
 
 ### 2. Config-Datei einfuegen
 
-Kopiere [config.unraid.example.yaml](/Users/joachim.stiegler/LLM-Benchmark/fixtures/config/config.unraid.example.yaml) nach:
+Kopiere [config.unraid.example.yaml](fixtures/config/config.unraid.example.yaml) nach:
 
 ```text
 /mnt/user/appdata/llm-benchmark/config/config.unraid.example.yaml
@@ -608,7 +608,7 @@ Im Unraid-Template oder Container-Setup:
 
 ### 5. Container als Dashboard starten
 
-Importiere [llm-benchmark.xml](/Users/joachim.stiegler/LLM-Benchmark/unraid/llm-benchmark.xml) oder uebernimm dessen Felder manuell.
+Importiere [llm-benchmark.xml](unraid/llm-benchmark.xml) oder uebernimm dessen Felder manuell.
 
 Wichtig:
 
@@ -733,7 +733,7 @@ Die Ansicht zeigt pro Modellspalte:
 
 ### Die 10 integrierten Praxis-Presets
 
-Die Presets liegen unter [presets.yaml](/Users/joachim.stiegler/LLM-Benchmark/fixtures/live_compare/presets.yaml) und koennen direkt in das Prompt-Feld geladen werden.
+Die Presets liegen unter [presets.yaml](fixtures/live_compare/presets.yaml) und koennen direkt in das Prompt-Feld geladen werden.
 
 1. `Faktenfrage mit Unsicherheitsdisziplin`
    Prueft, ob ein Modell sauber zwischen Wissen und Unsicherheit trennt.
@@ -829,7 +829,7 @@ gemeinsam lesen.
 - Container-Releases gehen ueber GitHub Actions nach GHCR.
 - Fuer Bugs und Erweiterungen liegen strukturierte GitHub-Issue-Templates bereit.
 - Pull Requests nutzen eine feste Checkliste, damit Report-Schema, Doku und Tests nicht vergessen werden.
-- Repository-weite Verantwortlichkeit ist ueber [CODEOWNERS](/Users/joachim.stiegler/LLM-Benchmark/.github/CODEOWNERS) beschrieben.
+- Repository-weite Verantwortlichkeit ist ueber [CODEOWNERS](.github/CODEOWNERS) beschrieben.
 
 ## Security-Hinweise
 
@@ -840,4 +840,4 @@ gemeinsam lesen.
 
 ## Lizenz
 
-Siehe [LICENSE](/Users/joachim.stiegler/LLM-Benchmark/LICENSE).
+Siehe [LICENSE](LICENSE).

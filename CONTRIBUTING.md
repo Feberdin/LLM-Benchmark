@@ -24,7 +24,7 @@ benchmark list-tests --tests-dir fixtures/tests
 - Öffentliche JSON- und CSV-Felder nur bewusst ändern, weil externe Analyse darauf aufbauen kann.
 - Neue Testfälle immer mit klarer `validation_rules`-Definition anlegen.
 - Bei neuen Provider-Sonderfällen zuerst das Verhalten dokumentieren, dann abstrahieren.
-- Vor größeren Änderungen kurz in [community-end-state.md](/Users/joachim.stiegler/LLM-Benchmark/docs/community-end-state.md) prüfen, ob der Vorschlag den stabilen Kern oder eher eine spätere Erweiterung betrifft.
+- Vor größeren Änderungen kurz in [community-end-state.md](docs/community-end-state.md) prüfen, ob der Vorschlag den stabilen Kern oder eher eine spätere Erweiterung betrifft.
 
 ## Stil
 
@@ -39,8 +39,8 @@ benchmark list-tests --tests-dir fixtures/tests
 - Kurz beschreiben, was geändert wurde.
 - Relevante Testfälle oder neue Fixtures nennen.
 - Falls Reporting-Struktur geändert wurde, die Auswirkungen auf `final_report.json` explizit erwähnen.
-- Die PR-Checkliste aus [.github/PULL_REQUEST_TEMPLATE.md](/Users/joachim.stiegler/LLM-Benchmark/.github/PULL_REQUEST_TEMPLATE.md) vollständig durchgehen.
-- Bei Community-Diskussionen gilt der Ton aus [CODE_OF_CONDUCT.md](/Users/joachim.stiegler/LLM-Benchmark/CODE_OF_CONDUCT.md).
+- Die PR-Checkliste aus [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md) vollständig durchgehen.
+- Bei Community-Diskussionen gilt der Ton aus [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## CI und Releases
 
