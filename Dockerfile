@@ -3,7 +3,7 @@
 # Invariants: Runtime writes happen only in `/app/results`; configuration stays external under `/config`.
 # Debugging: Rebuild with `docker build --no-cache .` if dependencies or copied assets look stale.
 
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown
